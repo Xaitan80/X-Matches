@@ -1,4 +1,5 @@
 # ---------- Build stage ----------
+# syntax=docker/dockerfile:1.7
 FROM golang:1.23-bookworm AS build
 WORKDIR /app
 
@@ -11,20 +12,26 @@ ENV GOPROXY=$GOPROXY_DEFAULT
 
 # Kopiera mod-filer först för bättre cache
 COPY go.mod go.sum ./
-# Visa env och hämta moduler med extra loggar (-x)
-RUN go env && go mod download -x
+# Hämta moduler med BuildKit-cache för snabbare builds
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go env && go mod download -x
 
 # Kopiera resten av koden
 COPY . .
 
 # CGO krävs för github.com/mattn/go-sqlite3
 ENV CGO_ENABLED=1
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Bygg endast main i rot (viktigt: inte ./... eftersom det ger "multiple packages to non-directory")
-RUN go build -ldflags="-s -w" -o /xmatches .
+# Bygg endast main i rot (viktigt: inte ./...)
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags="-s -w" -o /xmatches .
 
 # ---------- Runtime stage ----------
 FROM debian:bookworm-slim
