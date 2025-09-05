@@ -1,11 +1,14 @@
 package matches
 
 import (
-	"net/http"
-	"strconv"
+    "encoding/csv"
+    "fmt"
+    "net/http"
+    "strconv"
+    "time"
 
-	"github.com/gin-gonic/gin"
-	dbpkg "github.com/xaitan80/X-Matches/internal/db"
+    "github.com/gin-gonic/gin"
+    dbpkg "github.com/xaitan80/X-Matches/internal/db"
 )
 
 // ----- Helpers för mapping -----
@@ -142,16 +145,63 @@ func toDomain(req createOrUpdateReq) Match {
 // ----- Routes -----
 
 func RegisterRoutes(r *gin.Engine, repo *Repository) {
-	api := r.Group("/api")
-	{
-		api.GET("/matches", func(c *gin.Context) {
-			list, err := repo.List(c.Request.Context())
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			c.JSON(http.StatusOK, toAPIList(list))
-		})
+    api := r.Group("/api")
+    {
+        // CSV export of all matches
+        api.GET("/matches.csv", func(c *gin.Context) {
+            list, err := repo.List(c.Request.Context())
+            if err != nil {
+                c.String(http.StatusInternalServerError, err.Error())
+                return
+            }
+
+            filename := fmt.Sprintf("matches_%s.csv", time.Now().Format("2006-01-02"))
+            c.Header("Content-Type", "text/csv; charset=utf-8")
+            c.Header("Content-Disposition", "attachment; filename="+filename)
+
+            w := csv.NewWriter(c.Writer)
+            // Header
+            _ = w.Write([]string{
+                "id",
+                "date_raw","time_raw","end_time_raw","weekday",
+                "league","team","opponent","home_team","away_team",
+                "venue","court","city",
+                "gather_time","gather_place",
+                "match_number","referees","notes",
+                "played","goals_for","goals_against","player_notes",
+                "start_iso","end_iso",
+            })
+            // Rows
+            for _, m := range list {
+                _ = w.Write([]string{
+                    strconv.FormatInt(m.ID, 10),
+                    sval(m.DateRaw), sval(m.TimeRaw), sval(m.EndTimeRaw), sval(m.Weekday),
+                    sval(m.League), sval(m.Team), sval(m.Opponent), sval(m.HomeTeam), sval(m.AwayTeam),
+                    sval(m.Venue), sval(m.Court), sval(m.City),
+                    sval(m.GatherTime), sval(m.GatherPlace),
+                    sval(m.MatchNumber), sval(m.Referees), sval(m.Notes),
+                    strconv.FormatBool(bval(m.Played)),
+                    strconv.FormatInt(ival(m.GoalsFor), 10),
+                    strconv.FormatInt(ival(m.GoalsAgainst), 10),
+                    sval(m.PlayerNotes),
+                    sval(m.StartIso), sval(m.EndIso),
+                })
+            }
+            w.Flush()
+            if err := w.Error(); err != nil {
+                c.String(http.StatusInternalServerError, err.Error())
+                return
+            }
+        })
+
+        api.GET("/matches", func(c *gin.Context) {
+            list, err := repo.List(c.Request.Context())
+            if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+                return
+            }
+            c.JSON(http.StatusOK, toAPIList(list))
+        })
 
 		api.GET("/matches/:id", func(c *gin.Context) {
 			id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
