@@ -92,3 +92,4 @@ curl -X PATCH http://localhost:8080/api/matches/1 \
 
 - Formattering: `make fmt`
 - Rensa databasen: stoppa appen och radera `xmatches.db` (eller byt `DB_PATH`).
+- Ha kul
