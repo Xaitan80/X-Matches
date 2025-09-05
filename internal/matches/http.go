@@ -32,32 +32,34 @@ func bval(p *int64) bool {
 }
 
 func toAPI(m dbpkg.Match) Match {
-	return Match{
-		ID:           m.ID,
-		StartISO:     m.StartIso,
-		EndISO:       m.EndIso,
-		DateRaw:      sval(m.DateRaw),
-		TimeRaw:      sval(m.TimeRaw),
-		EndTimeRaw:   sval(m.EndTimeRaw),
-		Weekday:      sval(m.Weekday),
-		League:       sval(m.League),
-		Team:         sval(m.Team),
-		Opponent:     sval(m.Opponent),
-		HomeTeam:     sval(m.HomeTeam),
-		AwayTeam:     sval(m.AwayTeam),
-		Venue:        sval(m.Venue),
-		Court:        sval(m.Court),
-		City:         sval(m.City),
-		GatherTime:   sval(m.GatherTime),
-		GatherPlace:  sval(m.GatherPlace),
-		MatchNumber:  sval(m.MatchNumber),
-		Referees:     sval(m.Referees),
-		Notes:        sval(m.Notes),
-		Played:       bval(m.Played),
-		GoalsFor:     ival(m.GoalsFor),
-		GoalsAgainst: ival(m.GoalsAgainst),
-		PlayerNotes:  sval(m.PlayerNotes),
-	}
+    return Match{
+        ID:           m.ID,
+        StartISO:     m.StartIso,
+        EndISO:       m.EndIso,
+        DateRaw:      sval(m.DateRaw),
+        TimeRaw:      sval(m.TimeRaw),
+        EndTimeRaw:   sval(m.EndTimeRaw),
+        Weekday:      sval(m.Weekday),
+        League:       sval(m.League),
+        Team:         sval(m.Team),
+        Opponent:     sval(m.Opponent),
+        HomeTeam:     sval(m.HomeTeam),
+        AwayTeam:     sval(m.AwayTeam),
+        Venue:        sval(m.Venue),
+        Court:        sval(m.Court),
+        City:         sval(m.City),
+        GatherTime:   sval(m.GatherTime),
+        GatherPlace:  sval(m.GatherPlace),
+        MatchNumber:  sval(m.MatchNumber),
+        Referees:     sval(m.Referees),
+        Notes:        sval(m.Notes),
+        Played:       bval(m.Played),
+        GoalsFor:     ival(m.GoalsFor),
+        GoalsAgainst: ival(m.GoalsAgainst),
+        PlayerNotes:  sval(m.PlayerNotes),
+        TopScorerTeam: sval(m.TopScorerTeam),
+        TopScorerOpponent: sval(m.TopScorerOpponent),
+    }
 }
 
 func toAPIList(list []dbpkg.Match) []Match {
@@ -91,9 +93,11 @@ type createOrUpdateReq struct {
 	Played       *bool   `json:"played"`
 	GoalsFor     *int64  `json:"goals_for"`
 	GoalsAgainst *int64  `json:"goals_against"`
-	PlayerNotes  *string `json:"player_notes"`
-	StartISO     *string `json:"start_iso"`
-	EndISO       *string `json:"end_iso"`
+    PlayerNotes  *string `json:"player_notes"`
+    StartISO     *string `json:"start_iso"`
+    EndISO       *string `json:"end_iso"`
+    TopScorerTeam *string `json:"top_scorer_team"`
+    TopScorerOpponent *string `json:"top_scorer_opponent"`
 }
 
 func toDomain(req createOrUpdateReq) Match {
@@ -115,31 +119,33 @@ func toDomain(req createOrUpdateReq) Match {
 		}
 		return 0
 	}
-	return Match{
-		StartISO:     req.StartISO,
-		EndISO:       req.EndISO,
-		DateRaw:      val(req.DateRaw),
-		TimeRaw:      val(req.TimeRaw),
-		EndTimeRaw:   val(req.EndTimeRaw),
-		Weekday:      val(req.Weekday),
-		League:       val(req.League),
-		Team:         val(req.Team),
-		Opponent:     val(req.Opponent),
-		HomeTeam:     val(req.HomeTeam),
-		AwayTeam:     val(req.AwayTeam),
-		Venue:        val(req.Venue),
-		Court:        val(req.Court),
-		City:         val(req.City),
-		GatherTime:   val(req.GatherTime),
-		GatherPlace:  val(req.GatherPlace),
-		MatchNumber:  val(req.MatchNumber),
-		Referees:     val(req.Referees),
-		Notes:        val(req.Notes),
-		Played:       pb(req.Played),
-		GoalsFor:     pi(req.GoalsFor),
-		GoalsAgainst: pi(req.GoalsAgainst),
-		PlayerNotes:  val(req.PlayerNotes),
-	}
+    return Match{
+        StartISO:     req.StartISO,
+        EndISO:       req.EndISO,
+        DateRaw:      val(req.DateRaw),
+        TimeRaw:      val(req.TimeRaw),
+        EndTimeRaw:   val(req.EndTimeRaw),
+        Weekday:      val(req.Weekday),
+        League:       val(req.League),
+        Team:         val(req.Team),
+        Opponent:     val(req.Opponent),
+        HomeTeam:     val(req.HomeTeam),
+        AwayTeam:     val(req.AwayTeam),
+        Venue:        val(req.Venue),
+        Court:        val(req.Court),
+        City:         val(req.City),
+        GatherTime:   val(req.GatherTime),
+        GatherPlace:  val(req.GatherPlace),
+        MatchNumber:  val(req.MatchNumber),
+        Referees:     val(req.Referees),
+        Notes:        val(req.Notes),
+        Played:       pb(req.Played),
+        GoalsFor:     pi(req.GoalsFor),
+        GoalsAgainst: pi(req.GoalsAgainst),
+        PlayerNotes:  val(req.PlayerNotes),
+        TopScorerTeam: val(req.TopScorerTeam),
+        TopScorerOpponent: val(req.TopScorerOpponent),
+    }
 }
 
 // ----- Routes -----
@@ -169,6 +175,7 @@ func RegisterRoutes(r *gin.Engine, repo *Repository) {
                 "gather_time","gather_place",
                 "match_number","referees","notes",
                 "played","goals_for","goals_against","player_notes",
+                "top_scorer_team","top_scorer_opponent",
                 "start_iso","end_iso",
             })
             // Rows
@@ -184,6 +191,7 @@ func RegisterRoutes(r *gin.Engine, repo *Repository) {
                     strconv.FormatInt(ival(m.GoalsFor), 10),
                     strconv.FormatInt(ival(m.GoalsAgainst), 10),
                     sval(m.PlayerNotes),
+                    sval(m.TopScorerTeam), sval(m.TopScorerOpponent),
                     sval(m.StartIso), sval(m.EndIso),
                 })
             }

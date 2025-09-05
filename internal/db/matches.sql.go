@@ -14,37 +14,40 @@ INSERT INTO matches (
   start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday,
   league, team, opponent, home_team, away_team, venue, court, city,
   gather_time, gather_place, match_number, referees, notes,
-  played, goals_for, goals_against, player_notes
+  played, goals_for, goals_against, player_notes,
+  top_scorer_team, top_scorer_opponent
 ) VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
-RETURNING id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes
+RETURNING id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes, top_scorer_team, top_scorer_opponent
 `
 
 type CreateMatchParams struct {
-	StartIso     *string
-	EndIso       *string
-	DateRaw      *string
-	TimeRaw      *string
-	EndTimeRaw   *string
-	Weekday      *string
-	League       *string
-	Team         *string
-	Opponent     *string
-	HomeTeam     *string
-	AwayTeam     *string
-	Venue        *string
-	Court        *string
-	City         *string
-	GatherTime   *string
-	GatherPlace  *string
-	MatchNumber  *string
-	Referees     *string
-	Notes        *string
-	Played       *int64
-	GoalsFor     *int64
-	GoalsAgainst *int64
-	PlayerNotes  *string
+    StartIso     *string
+    EndIso       *string
+    DateRaw      *string
+    TimeRaw      *string
+    EndTimeRaw   *string
+    Weekday      *string
+    League       *string
+    Team         *string
+    Opponent     *string
+    HomeTeam     *string
+    AwayTeam     *string
+    Venue        *string
+    Court        *string
+    City         *string
+    GatherTime   *string
+    GatherPlace  *string
+    MatchNumber  *string
+    Referees     *string
+    Notes        *string
+    Played       *int64
+    GoalsFor     *int64
+    GoalsAgainst *int64
+    PlayerNotes  *string
+    TopScorerTeam *string
+    TopScorerOpponent *string
 }
 
 func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match, error) {
@@ -72,6 +75,8 @@ func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match
 		arg.GoalsFor,
 		arg.GoalsAgainst,
 		arg.PlayerNotes,
+		arg.TopScorerTeam,
+		arg.TopScorerOpponent,
 	)
 	var i Match
 	err := row.Scan(
@@ -99,6 +104,8 @@ func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match
 		&i.GoalsFor,
 		&i.GoalsAgainst,
 		&i.PlayerNotes,
+		&i.TopScorerTeam,
+		&i.TopScorerOpponent,
 	)
 	return i, err
 }
@@ -113,7 +120,7 @@ func (q *Queries) DeleteMatch(ctx context.Context, id int64) error {
 }
 
 const getMatch = `-- name: GetMatch :one
-SELECT id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes FROM matches WHERE id = ?
+SELECT id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes, top_scorer_team, top_scorer_opponent FROM matches WHERE id = ?
 `
 
 func (q *Queries) GetMatch(ctx context.Context, id int64) (Match, error) {
@@ -144,12 +151,14 @@ func (q *Queries) GetMatch(ctx context.Context, id int64) (Match, error) {
 		&i.GoalsFor,
 		&i.GoalsAgainst,
 		&i.PlayerNotes,
+		&i.TopScorerTeam,
+		&i.TopScorerOpponent,
 	)
 	return i, err
 }
 
 const listMatches = `-- name: ListMatches :many
-SELECT id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes FROM matches
+SELECT id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes, top_scorer_team, top_scorer_opponent FROM matches
 ORDER BY (start_iso IS NULL), start_iso, id
 `
 
@@ -187,6 +196,8 @@ func (q *Queries) ListMatches(ctx context.Context) ([]Match, error) {
 			&i.GoalsFor,
 			&i.GoalsAgainst,
 			&i.PlayerNotes,
+			&i.TopScorerTeam,
+			&i.TopScorerOpponent,
 		); err != nil {
 			return nil, err
 		}
@@ -226,36 +237,40 @@ SET
   played = ?,
   goals_for = ?,
   goals_against = ?,
-  player_notes = ?
+  player_notes = ?,
+  top_scorer_team = ?,
+  top_scorer_opponent = ?
 WHERE id = ?
-RETURNING id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes
+RETURNING id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes, top_scorer_team, top_scorer_opponent
 `
 
 type UpdateMatchParams struct {
-	StartIso     *string
-	EndIso       *string
-	DateRaw      *string
-	TimeRaw      *string
-	EndTimeRaw   *string
-	Weekday      *string
-	League       *string
-	Team         *string
-	Opponent     *string
-	HomeTeam     *string
-	AwayTeam     *string
-	Venue        *string
-	Court        *string
-	City         *string
-	GatherTime   *string
-	GatherPlace  *string
-	MatchNumber  *string
-	Referees     *string
-	Notes        *string
-	Played       *int64
-	GoalsFor     *int64
-	GoalsAgainst *int64
-	PlayerNotes  *string
-	ID           int64
+    StartIso     *string
+    EndIso       *string
+    DateRaw      *string
+    TimeRaw      *string
+    EndTimeRaw   *string
+    Weekday      *string
+    League       *string
+    Team         *string
+    Opponent     *string
+    HomeTeam     *string
+    AwayTeam     *string
+    Venue        *string
+    Court        *string
+    City         *string
+    GatherTime   *string
+    GatherPlace  *string
+    MatchNumber  *string
+    Referees     *string
+    Notes        *string
+    Played       *int64
+    GoalsFor     *int64
+    GoalsAgainst *int64
+    PlayerNotes  *string
+    TopScorerTeam *string
+    TopScorerOpponent *string
+    ID           int64
 }
 
 func (q *Queries) UpdateMatch(ctx context.Context, arg UpdateMatchParams) (Match, error) {
@@ -283,6 +298,8 @@ func (q *Queries) UpdateMatch(ctx context.Context, arg UpdateMatchParams) (Match
 		arg.GoalsFor,
 		arg.GoalsAgainst,
 		arg.PlayerNotes,
+		arg.TopScorerTeam,
+		arg.TopScorerOpponent,
 		arg.ID,
 	)
 	var i Match
@@ -311,6 +328,8 @@ func (q *Queries) UpdateMatch(ctx context.Context, arg UpdateMatchParams) (Match
 		&i.GoalsFor,
 		&i.GoalsAgainst,
 		&i.PlayerNotes,
+		&i.TopScorerTeam,
+		&i.TopScorerOpponent,
 	)
 	return i, err
 }
