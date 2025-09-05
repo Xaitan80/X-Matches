@@ -54,6 +54,47 @@ Miljö i compose:
 - `ADDR=:8080`
 - `DB_PATH=/data/xmatches.db` (ligger på volymen `xmatches-data`)
 
+## Köra från Docker Hub (rekommenderat)
+
+1) Hämta senaste bild:
+
+```
+docker pull xaitan/x-matches:latest
+```
+
+2) Sätt rättigheter på volymen en gång (icke-root runtime använder UID 65532):
+
+```
+docker run --rm -v xmatches-data:/data busybox:1.36 sh -c 'chown -R 65532:65532 /data'
+```
+
+3) Starta appen:
+
+```
+docker run --rm \
+  -p 8080:8080 \
+  -v xmatches-data:/data \
+  -e ADDR=:8080 \
+  -e DB_PATH=/data/xmatches.db \
+  xaitan/x-matches:latest
+```
+
+Öppna: http://localhost:8080
+
+Snabb felsökning:
+
+- Testa utan volym (temporär DB):
+
+```
+docker run --rm -p 8080:8080 -e DB_PATH=/tmp/xmatches.db xaitan/x-matches:latest
+```
+
+- Om du absolut vill köra som root (ej rekommenderat):
+
+```
+docker run --rm --user 0:0 -p 8080:8080 -v xmatches-data:/data -e DB_PATH=/data/xmatches.db xaitan/x-matches:latest
+```
+
 ## API‑snabbguide
 
 - Bas‑URL: `http://localhost:8080`
