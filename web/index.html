@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="sv">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Handboll – Matcher</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 2rem; }
+form, table { max-width: 1000px; }
+fieldset { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; }
+label { display:block; margin:.25rem 0 .15rem; font-size:.9rem; }
+input, select, textarea { width: 100%; padding:.5rem; box-sizing: border-box; }
+button { padding:.6rem 1rem; }
+table { border-collapse: collapse; width: 100%; margin-top: 2rem; }
+th, td { border: 1px solid #ddd; padding: .5rem; }
+th { background: #f5f5f5; }
+.badge { padding:.2rem .5rem; border-radius:.5rem; background:#eee; }
+.played { background:#d1fadf; }
+.row { display:grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.row-2 { display:grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+</style>
+
+<h1>Matcher</h1>
+
+<form id="createForm">
+  <fieldset>
+    <legend>Lägg till match</legend>
+    <div class="row">
+      <div>
+        <label for="date">Datum</label>
+        <input id="date" type="date" required />
+      </div>
+      <div>
+        <label for="time">Starttid</label>
+        <input id="time" type="time" required />
+      </div>
+      <div>
+        <label for="end_time">Sluttid (valfritt)</label>
+        <input id="end_time" type="time" />
+      </div>
+    </div>
+    <div class="row-2">
+      <div>
+        <label for="team">Vårt lag</label>
+        <input id="team" type="text" placeholder="Ex: IFK X F11" />
+      </div>
+      <div>
+        <label for="opponent">Motståndare</label>
+        <input id="opponent" type="text" />
+      </div>
+    </div>
+    <div class="row-2">
+      <div>
+        <label for="venue">Hall/Plats</label>
+        <input id="venue" type="text" placeholder="Ex: Eslövshallen" />
+      </div>
+      <div>
+        <label for="city">Stad</label>
+        <input id="city" type="text" placeholder="Ex: Eslöv" />
+      </div>
+    </div>
+    <div class="row-2">
+      <div>
+        <label for="league">Serie (valfritt)</label>
+        <input id="league" type="text" />
+      </div>
+      <div>
+        <label for="court">Plan (valfritt)</label>
+        <input id="court" type="text" />
+      </div>
+    </div>
+    <div class="row-2">
+      <div>
+        <label for="gather_time">Samlingstid (valfritt)</label>
+        <input id="gather_time" type="text" placeholder="t.ex. 13:45 i hallen" />
+      </div>
+      <div>
+        <label for="gather_place">Samling plats (valfritt)</label>
+        <input id="gather_place" type="text" />
+      </div>
+    </div>
+    <label for="notes">Noteringar</label>
+    <textarea id="notes" rows="2" placeholder="Övrigt..."></textarea>
+    <div style="margin-top:.75rem;">
+      <button type="submit">Spara match</button>
+    </div>
+  </fieldset>
+</form>
+
+<table id="tbl"><thead>
+<tr>
+  <th>Datum</th><th>Tid</th><th>Lag</th><th>Motståndare</th>
+  <th>Plats</th><th>Resultat</th><th>Spelad</th><th>Åtgärder</th>
+</tr></thead><tbody></tbody></table>
+
+<script>
+async function list() {
+  const res = await fetch('/api/matches');
+  const data = await res.json();
+  const tb = document.querySelector('#tbl tbody');
+  tb.innerHTML = '';
+  data.forEach(m => {
+    const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
+    const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
+    const timeStr = d ? d.toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'}) : (m.time_raw||'');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${dateStr}</td>
+      <td>${timeStr}</td>
+      <td>${m.team||''}</td>
+      <td>${m.opponent||m.home_team||m.away_team||''}</td>
+      <td>${[m.venue,m.city].filter(Boolean).join(', ')}</td>
+      <td>${(m.goals_for??'') + (m.goals_for!==null?' – ':'') + (m.goals_against??'')}</td>
+      <td><span class="badge ${m.played?'played':''}">${m.played?'Ja':'Nej'}</span></td>
+      <td>
+        <button data-id="${m.id}" class="playBtn">${m.played?'Markera ej spelad':'Markera spelad'}</button>
+        <button data-id="${m.id}" class="delBtn">Radera</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  document.querySelectorAll('.playBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      // toggla played
+      const row = [...tb.children].find(tr => tr.querySelector(`[data-id="${id}"]`));
+      const played = row.querySelector('.badge').textContent === 'Nej';
+      await fetch(`/api/matches/${id}`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ played })
+      });
+      list();
+    });
+  });
+
+  document.querySelectorAll('.delBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!confirm('Radera match?')) return;
+      await fetch(`/api/matches/${id}`, { method:'DELETE' });
+      list();
+    });
+  });
+}
+
+document.querySelector('#createForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    date_raw: document.querySelector('#date').value,
+    time_raw: document.querySelector('#time').value,
+    end_time_raw: document.querySelector('#end_time').value,
+    team: document.querySelector('#team').value,
+    opponent: document.querySelector('#opponent').value,
+    venue: document.querySelector('#venue').value,
+    city: document.querySelector('#city').value,
+    league: document.querySelector('#league').value,
+    court: document.querySelector('#court').value,
+    gather_time: document.querySelector('#gather_time').value,
+    gather_place: document.querySelector('#gather_place').value,
+    notes: document.querySelector('#notes').value
+  };
+  await fetch('/api/matches', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  e.target.reset();
+  list();
+});
+
+list();
+</script>
+</html>
