@@ -24,8 +24,8 @@ COPY . .
 ENV CGO_ENABLED=1
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt \
-    apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates && \
+    apt-get -o Acquire::Retries=5 update && \
+    apt-get -o Acquire::Retries=5 install -y --no-install-recommends build-essential ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Bygg endast main i rot (viktigt: inte ./...)
@@ -37,8 +37,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM debian:bookworm-slim
 
 # Tidszoner + cert (bra i container)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates tzdata && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get -o Acquire::Retries=5 update && \
+    apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates tzdata && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
