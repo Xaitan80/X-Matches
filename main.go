@@ -6,6 +6,7 @@ import (
     "log"
     "net/http"
     "os"
+    "strings"
 
     _ "time/tzdata"
 
@@ -38,8 +39,17 @@ func main() {
 	q := dbpkg.New(sqlDB)
 	repo := matches.NewRepository(q)
 
-	// HTTP
-	r := gin.Default()
+    // HTTP
+    r := gin.Default()
+    // Configure explicit trusted proxies to avoid gin's trust-all warning
+    // Default trusts only loopback addresses; override via TRUSTED_PROXIES env (comma-separated CIDRs/IPs)
+    tp := strings.Split(env("TRUSTED_PROXIES", "127.0.0.1,::1"), ",")
+    for i := range tp {
+        tp[i] = strings.TrimSpace(tp[i])
+    }
+    if err := r.SetTrustedProxies(tp); err != nil {
+        log.Fatalf("trusted proxies: %v", err)
+    }
 
 	// API
 	matches.RegisterRoutes(r, repo)
