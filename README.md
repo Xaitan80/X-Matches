@@ -1,5 +1,6 @@
 ![Build & Publish Docker](https://github.com/xaitan80/X-Matches/actions/workflows/docker-publish.yml/badge.svg)
-
+##
+Contribute
 # X‑Matches
 
 En liten app för att lägga in matcher, se dem i en enkel vy och uppdatera resultat. Backend är Go + SQLite, migrationer körs automatiskt vid start.
