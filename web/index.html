@@ -1,174 +1,336 @@
 <!doctype html>
-<html lang="sv">
+<html lang="sv" data-theme="light">
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Handboll – Matcher</title>
+<title>X-Matches – Matcher</title>
 <style>
-body { font-family: system-ui, sans-serif; margin: 2rem; }
-form, table { max-width: 1000px; }
-fieldset { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; }
-label { display:block; margin:.25rem 0 .15rem; font-size:.9rem; }
-input, select, textarea { width: 100%; padding:.5rem; box-sizing: border-box; }
-button { padding:.6rem 1rem; }
-table { border-collapse: collapse; width: 100%; margin-top: 2rem; }
-th, td { border: 1px solid #ddd; padding: .5rem; }
-th { background: #f5f5f5; }
-.badge { padding:.2rem .5rem; border-radius:.5rem; background:#eee; }
-.played { background:#d1fadf; }
-.row { display:grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
-.row-2 { display:grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+  :root{
+    /* Light (default) */
+    --bg1:#b0ddff;          /* gradient top */
+    --bg2:#e6f3ff;          /* gradient bottom */
+    --card-bg:#ffffff;
+    --ink:#0a2540;
+    --muted:#4c5d73;
+    --border:#b3d4ff;
+    --primary:#1e66ff;
+    --primary-700:#154ecc;
+    --primary-ring: rgba(30,102,255,.25);
+    --danger:#ff4d4f;
+    --success-bg:#d1fadf;
+    --success-fg:#065f46;
+    --thead-grad-1:#f9fbff;
+    --thead-grad-2:#f3f7ff;
+    --row-hover:#f8fbff;
+    --input-bg:#ffffff;
+    --table-bg:#ffffff;
+    --shadow:0 10px 30px rgba(2,12,27,.08);
+  }
+
+  /* Dark theme overrides */
+  [data-theme="dark"]{
+    --bg1:#0b1220;
+    --bg2:#0e1729;
+    --card-bg:#0f172a;
+    --ink:#e2e8f0;
+    --muted:#94a3b8;
+    --border:#1e293b;
+    --primary:#60a5fa;
+    --primary-700:#3b82f6;
+    --primary-ring: rgba(96,165,250,.25);
+    --danger:#ef4444;
+    --success-bg:#064e3b;
+    --success-fg:#bbf7d0;
+    --thead-grad-1:#0b1220;
+    --thead-grad-2:#0e1729;
+    --row-hover:#0b1220;
+    --input-bg:#0b1220;
+    --table-bg:#0b1220;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    color:var(--ink);
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 60%);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+    transition: background .25s ease, color .2s ease;
+  }
+
+  .container{ max-width:1100px; margin: clamp(1rem, 2vw, 2rem) auto; padding: 0 1rem; }
+  .card{ background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow); padding:1.25rem; margin-bottom:1rem; transition: background .25s ease, box-shadow .25s ease; }
+
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.5rem; }
+  h1{ margin:0; letter-spacing:.2px; }
+  .sub{ color:var(--muted); margin:.25rem 0 0; }
+
+  /* Inputs */
+  label{ display:block; margin:.35rem 0 .2rem; font-size:.92rem; color:var(--muted); }
+  input, select, textarea{
+    width:100%; padding:.6rem .7rem; box-sizing:border-box;
+    background:var(--input-bg); color:var(--ink);
+    border:2px solid var(--border); border-radius:10px;
+    transition:border-color .2s ease, box-shadow .2s ease, transform .06s ease, background .2s;
+  }
+  input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 0 4px var(--primary-ring);
+  }
+
+  /* Buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:.5rem; padding:.55rem .9rem; border-radius:12px;
+    font-weight:600; border:0; cursor:pointer;
+    transition: transform .05s ease, box-shadow .2s ease, background .2s ease, border-color .2s;
+    user-select:none;
+  }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primary{
+    background:var(--primary); color:#fff; box-shadow:0 8px 20px rgba(30,102,255,.28);
+  }
+  [data-theme="dark"] .btn-primary{ box-shadow: none; }
+  .btn-primary:hover{ background:var(--primary-700); }
+  .btn-outline{
+    background:transparent; color:var(--primary); border:2px solid var(--primary);
+  }
+  .btn-outline:hover{ background:rgba(0,0,0,.03); }
+  [data-theme="dark"] .btn-outline:hover{ background:rgba(255,255,255,.04); }
+  .btn-danger{ background:var(--danger); color:#fff; }
+  .actions{ display:flex; gap:.5rem; flex-wrap:wrap; }
+
+  /* Layout */
+  .row{ display:grid; grid-template-columns: repeat(3, 1fr); gap:.8rem; }
+  .row-2{ display:grid; grid-template-columns: repeat(2, 1fr); gap:.8rem; }
+  @media (max-width: 760px){
+    .row, .row-2{ grid-template-columns: 1fr; }
+  }
+
+  /* Table */
+  table{ border-collapse:separate; border-spacing:0; width:100%; background:var(--table-bg); border-radius:12px; overflow:hidden; }
+  thead th{
+    text-align:left; font-weight:700; font-size:.9rem; color:var(--muted);
+    background: linear-gradient(var(--thead-grad-1), var(--thead-grad-2));
+    position:sticky; top:0; z-index:1;
+  }
+  th, td{ padding:.65rem .7rem; border-bottom:1px solid #e7eefc; }
+  [data-theme="dark"] th, [data-theme="dark"] td{ border-bottom:1px solid var(--border); }
+  tbody tr:hover td{ background:var(--row-hover); }
+  .badge{
+    display:inline-block; padding:.2rem .55rem; border-radius:999px; font-size:.8rem;
+    background:#eef; color:#1e40af;
+  }
+  .played{ background:var(--success-bg); color:var(--success-fg); }
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ transition:none !important; animation:none !important; }
+  }
 </style>
 
-<h1>Matcher</h1>
+<div class="container">
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h1>Matcher</h1>
+        <p class="sub">Lägg till match och håll koll på resultat. ✨</p>
+      </div>
 
-<form id="createForm">
-  <fieldset>
-    <legend>Lägg till match</legend>
-    <div class="row">
-      <div>
-        <label for="date">Datum</label>
-        <input id="date" type="date" required />
-      </div>
-      <div>
-        <label for="time">Starttid</label>
-        <input id="time" type="time" required />
-      </div>
-      <div>
-        <label for="end_time">Sluttid (valfritt)</label>
-        <input id="end_time" type="time" />
+      <!-- Verktyg -->
+      <div class="actions">
+        <a class="btn btn-outline" href="/api/matches.csv" download>Exportera CSV</a>
+        <button id="themeToggle" class="btn btn-outline" aria-pressed="false" title="Byt tema">🌞 Ljust</button>
       </div>
     </div>
-    <div class="row-2">
-      <div>
-        <label for="team">Vårt lag</label>
-        <input id="team" type="text" placeholder="Ex: IFK X F11" />
-      </div>
-      <div>
-        <label for="opponent">Motståndare</label>
-        <input id="opponent" type="text" />
-      </div>
-    </div>
-    <div class="row-2">
-      <div>
-        <label for="venue">Hall/Plats</label>
-        <input id="venue" type="text" placeholder="Ex: Eslövshallen" />
-      </div>
-      <div>
-        <label for="city">Stad</label>
-        <input id="city" type="text" placeholder="Ex: Eslöv" />
-      </div>
-    </div>
-    <div class="row-2">
-      <div>
-        <label for="league">Serie (valfritt)</label>
-        <input id="league" type="text" />
-      </div>
-      <div>
-        <label for="court">Plan (valfritt)</label>
-        <input id="court" type="text" />
-      </div>
-    </div>
-    <div class="row-2">
-      <div>
-        <label for="gather_time">Samlingstid (valfritt)</label>
-        <input id="gather_time" type="text" placeholder="t.ex. 13:45 i hallen" />
-      </div>
-      <div>
-        <label for="gather_place">Samling plats (valfritt)</label>
-        <input id="gather_place" type="text" />
-      </div>
-    </div>
-    <label for="notes">Noteringar</label>
-    <textarea id="notes" rows="2" placeholder="Övrigt..."></textarea>
-    <div style="margin-top:.75rem;">
-      <button type="submit">Spara match</button>
-    </div>
-  </fieldset>
-</form>
 
-<table id="tbl"><thead>
-<tr>
-  <th>Datum</th><th>Tid</th><th>Lag</th><th>Motståndare</th>
-  <th>Plats</th><th>Resultat</th><th>Spelad</th><th>Åtgärder</th>
-</tr></thead><tbody></tbody></table>
+    <form id="createForm" style="margin-top:.25rem">
+      <div class="row">
+        <div>
+          <label for="date">Datum</label>
+          <input id="date" type="date" required />
+        </div>
+        <div>
+          <label for="time">Starttid</label>
+          <input id="time" type="time" required />
+        </div>
+        <div>
+          <label for="end_time">Sluttid (valfritt)</label>
+          <input id="end_time" type="time" />
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div>
+          <label for="team">Vårt lag</label>
+          <input id="team" type="text" placeholder="Ex: IFK X F11" />
+        </div>
+        <div>
+          <label for="opponent">Motståndare</label>
+          <input id="opponent" type="text" />
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div>
+          <label for="venue">Hall/Plats</label>
+          <input id="venue" type="text" placeholder="Ex: Eslövshallen" />
+        </div>
+        <div>
+          <label for="city">Stad</label>
+          <input id="city" type="text" placeholder="Ex: Eslöv" />
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div>
+          <label for="league">Serie (valfritt)</label>
+          <input id="league" type="text" />
+        </div>
+        <div>
+          <label for="court">Plan (valfritt)</label>
+          <input id="court" type="text" />
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div>
+          <label for="gather_time">Samlingstid (valfritt)</label>
+          <input id="gather_time" type="text" placeholder="t.ex. 13:45 i hallen" />
+        </div>
+        <div>
+          <label for="gather_place">Samling plats (valfritt)</label>
+          <input id="gather_place" type="text" />
+        </div>
+      </div>
+
+      <label for="notes">Noteringar</label>
+      <textarea id="notes" rows="2" placeholder="Övrigt..."></textarea>
+
+      <div style="margin-top:.9rem">
+        <button class="btn btn-primary" type="submit">Spara match</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>Datum</th><th>Tid</th><th>Lag</th><th>Motståndare</th>
+          <th>Plats</th><th>Resultat</th><th>Spelad</th><th>Åtgärder</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
-async function list() {
-  const res = await fetch('/api/matches');
-  const data = await res.json();
-  const tb = document.querySelector('#tbl tbody');
-  tb.innerHTML = '';
-  data.forEach(m => {
-    const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
-    const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
-    const timeStr = d ? d.toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'}) : (m.time_raw||'');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${dateStr}</td>
-      <td>${timeStr}</td>
-      <td>${m.team||''}</td>
-      <td>${m.opponent||m.home_team||m.away_team||''}</td>
-      <td>${[m.venue,m.city].filter(Boolean).join(', ')}</td>
-      <td>${(m.goals_for??'') + (m.goals_for!==null?' – ':'') + (m.goals_against??'')}</td>
-      <td><span class="badge ${m.played?'played':''}">${m.played?'Ja':'Nej'}</span></td>
-      <td>
-        <button data-id="${m.id}" class="playBtn">${m.played?'Markera ej spelad':'Markera spelad'}</button>
-        <button data-id="${m.id}" class="delBtn">Radera</button>
-      </td>
-    `;
-    tb.appendChild(tr);
+  // --- Tema-hantering ---
+  const THEME_KEY = 'xmatches_theme';
+
+  function getPreferredTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark' : 'light';
+  }
+  function applyTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(THEME_KEY, theme);
+    const btn = document.getElementById('themeToggle');
+    if (btn){
+      const isDark = theme === 'dark';
+      btn.setAttribute('aria-pressed', String(isDark));
+      btn.textContent = isDark ? '🌙 Mörkt' : '🌞 Ljust';
+    }
+  }
+  // Init
+  applyTheme(getPreferredTheme());
+  // Toggle
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+    applyTheme(next);
   });
 
-  document.querySelectorAll('.playBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-id');
-      // toggla played
-      const row = [...tb.children].find(tr => tr.querySelector(`[data-id="${id}"]`));
-      const played = row.querySelector('.badge').textContent === 'Nej';
-      await fetch(`/api/matches/${id}`, {
-        method:'PATCH',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ played })
+  // --- App-logik ---
+  async function list() {
+    const res = await fetch('/api/matches');
+    const data = await res.json();
+    const tb = document.querySelector('#tbl tbody');
+    tb.innerHTML = '';
+    data.forEach(m => {
+      const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
+      const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
+      const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${dateStr}</td>
+        <td>${timeStr}</td>
+        <td>${m.team||''}</td>
+        <td>${m.opponent||m.home_team||m.away_team||''}</td>
+        <td>${[m.venue,m.city].filter(Boolean).join(', ')}</td>
+        <td>${(m.goals_for??'') + (m.goals_for!==null?' – ':'') + (m.goals_against??'')}</td>
+        <td><span class="badge ${m.played?'played':''}">${m.played?'Ja':'Nej'}</span></td>
+        <td>
+          <div class="actions">
+            <button data-id="${m.id}" class="btn btn-outline playBtn">${m.played?'Markera ej spelad':'Markera spelad'}</button>
+            <button data-id="${m.id}" class="btn btn-danger delBtn">Radera</button>
+          </div>
+        </td>
+      `;
+      tb.appendChild(tr);
+    });
+
+    document.querySelectorAll('.playBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const row = [...tb.children].find(tr => tr.querySelector(`[data-id="${id}"]`));
+        const played = row.querySelector('.badge').textContent === 'Nej';
+        await fetch(`/api/matches/${id}`, {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ played })
+        });
+        list();
       });
-      list();
     });
+
+    document.querySelectorAll('.delBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('Radera match?')) return;
+        await fetch(`/api/matches/${id}`, { method:'DELETE' });
+        list();
+      });
+    });
+  }
+
+  document.querySelector('#createForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+      date_raw: document.querySelector('#date').value,
+      time_raw: document.querySelector('#time').value,
+      end_time_raw: document.querySelector('#end_time').value,
+      team: document.querySelector('#team').value,
+      opponent: document.querySelector('#opponent').value,
+      venue: document.querySelector('#venue').value,
+      city: document.querySelector('#city').value,
+      league: document.querySelector('#league').value,
+      court: document.querySelector('#court').value,
+      gather_time: document.querySelector('#gather_time').value,
+      gather_place: document.querySelector('#gather_place').value,
+      notes: document.querySelector('#notes').value
+    };
+    await fetch('/api/matches', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    e.target.reset();
+    list();
   });
 
-  document.querySelectorAll('.delBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-id');
-      if (!confirm('Radera match?')) return;
-      await fetch(`/api/matches/${id}`, { method:'DELETE' });
-      list();
-    });
-  });
-}
-
-document.querySelector('#createForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const body = {
-    date_raw: document.querySelector('#date').value,
-    time_raw: document.querySelector('#time').value,
-    end_time_raw: document.querySelector('#end_time').value,
-    team: document.querySelector('#team').value,
-    opponent: document.querySelector('#opponent').value,
-    venue: document.querySelector('#venue').value,
-    city: document.querySelector('#city').value,
-    league: document.querySelector('#league').value,
-    court: document.querySelector('#court').value,
-    gather_time: document.querySelector('#gather_time').value,
-    gather_place: document.querySelector('#gather_place').value,
-    notes: document.querySelector('#notes').value
-  };
-  await fetch('/api/matches', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  e.target.reset();
   list();
-});
-
-list();
 </script>
 </html>
