@@ -21,11 +21,12 @@ Valfria miljövariabler:
 
 - `ADDR`: adress/port (default `:8080`)
 - `DB_PATH`: sökväg till SQLite‑fil (default `xmatches.db`)
+- `TRUSTED_PROXIES`: kommaseparerade CIDR/IP för proxys att lita på (default `127.0.0.1,::1`)
 
 Exempel:
 
 ```
-ADDR=127.0.0.1:9000 DB_PATH=/tmp/xmatches.db go run .
+ADDR=127.0.0.1:9000 DB_PATH=/tmp/xmatches.db TRUSTED_PROXIES="127.0.0.1,::1" go run .
 ```
 
 Migrationer: Tabellen skapas/uppgraderas automatiskt vid start (inbakade Goose‑migrationer).
@@ -77,6 +78,9 @@ docker run --rm \
   -e ADDR=:8080 \
   -e DB_PATH=/data/xmatches.db \
   xaitan/x-matches:latest
+
+
+  docker run --rm -p 8080:8080 -v xmatches-data:/data -e ADDR=:8080 -e DB_PATH=/data/xmatches.db xaitan/x-matches:latest
 ```
 
 Öppna: http://localhost:8080
