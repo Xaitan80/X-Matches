@@ -74,7 +74,9 @@ curl -X POST http://localhost:8080/api/matches \
     "date_raw":"2025-09-20",
     "time_raw":"14:30",
     "team":"IFK X F11",
-    "opponent":"BK Y"
+    "opponent":"BK Y",
+    "top_scorer_team":"A. Svensson (3)",
+    "top_scorer_opponent":"K. Karlsson (2)"
   }'
 ```
 
