@@ -203,6 +203,17 @@
         </div>
       </div>
 
+      <div class="row-2">
+        <div>
+          <label for="top_scorer_team">Bästa målskytt – vårt lag</label>
+          <input id="top_scorer_team" type="text" placeholder="Ex: A. Svensson (3)" />
+        </div>
+        <div>
+          <label for="top_scorer_opponent">Bästa målskytt – motstånd</label>
+          <input id="top_scorer_opponent" type="text" placeholder="Ex: K. Karlsson (2)" />
+        </div>
+      </div>
+
       <label for="notes">Noteringar</label>
       <textarea id="notes" rows="2" placeholder="Övrigt..."></textarea>
 
@@ -217,7 +228,7 @@
       <thead>
         <tr>
           <th>Datum</th><th>Tid</th><th>Lag</th><th>Motståndare</th>
-          <th>Plats</th><th>Resultat</th><th>Spelad</th><th>Åtgärder</th>
+          <th>Plats</th><th>Resultat</th><th>Toppskyttar</th><th>Spelad</th><th>Åtgärder</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -271,10 +282,12 @@
         <td>${m.opponent||m.home_team||m.away_team||''}</td>
         <td>${[m.venue,m.city].filter(Boolean).join(', ')}</td>
         <td>${(m.goals_for??'') + (m.goals_for!==null?' – ':'') + (m.goals_against??'')}</td>
+        <td>${[m.top_scorer_team, m.top_scorer_opponent].filter(Boolean).join(' / ')}</td>
         <td><span class="badge ${m.played?'played':''}">${m.played?'Ja':'Nej'}</span></td>
         <td>
           <div class="actions">
             <button data-id="${m.id}" class="btn btn-outline playBtn">${m.played?'Markera ej spelad':'Markera spelad'}</button>
+            <button data-id="${m.id}" data-tst="${m.top_scorer_team||''}" data-tso="${m.top_scorer_opponent||''}" class="btn btn-outline editScorerBtn">Redigera skyttar</button>
             <button data-id="${m.id}" class="btn btn-danger delBtn">Radera</button>
           </div>
         </td>
@@ -304,6 +317,24 @@
         list();
       });
     });
+
+    document.querySelectorAll('.editScorerBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const curTeam = btn.getAttribute('data-tst') || '';
+        const curOpp = btn.getAttribute('data-tso') || '';
+        const team = prompt('Bästa målskytt – vårt lag', curTeam);
+        if (team === null) return; // cancelled
+        const opp = prompt('Bästa målskytt – motstånd', curOpp);
+        if (opp === null) return; // cancelled
+        await fetch(`/api/matches/${id}`, {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ top_scorer_team: team, top_scorer_opponent: opp })
+        });
+        list();
+      });
+    });
   }
 
   document.querySelector('#createForm').addEventListener('submit', async (e) => {
@@ -320,7 +351,9 @@
       court: document.querySelector('#court').value,
       gather_time: document.querySelector('#gather_time').value,
       gather_place: document.querySelector('#gather_place').value,
-      notes: document.querySelector('#notes').value
+      notes: document.querySelector('#notes').value,
+      top_scorer_team: document.querySelector('#top_scorer_team').value,
+      top_scorer_opponent: document.querySelector('#top_scorer_opponent').value
     };
     await fetch('/api/matches', {
       method:'POST',
