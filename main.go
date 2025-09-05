@@ -1,14 +1,16 @@
 package main
 
 import (
-	"database/sql"
-	"embed"
-	"log"
-	"net/http"
-	"os"
+    "database/sql"
+    "embed"
+    "log"
+    "net/http"
+    "os"
 
-	"github.com/gin-gonic/gin"
-	_ "github.com/mattn/go-sqlite3"
+    _ "time/tzdata"
+
+    "github.com/gin-gonic/gin"
+    _ "modernc.org/sqlite"
 
 	dbpkg "github.com/xaitan80/X-Matches/internal/db"
 	"github.com/xaitan80/X-Matches/internal/matches"
@@ -20,8 +22,8 @@ var webFS embed.FS
 func main() {
 	dsn := env("DB_PATH", "xmatches.db")
 
-	// Öppna DB
-	sqlDB, err := sql.Open("sqlite3", dsn)
+    // Öppna DB (modernc driver name: "sqlite")
+    sqlDB, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}

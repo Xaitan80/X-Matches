@@ -1,7 +1,7 @@
 # ---------- Build stage ----------
 # syntax=docker/dockerfile:1.7
 FROM golang:1.23-bookworm AS build
-WORKDIR /app
+WORKDIR /src
 
 # Säkerställ rätt verktygskedja om go.mod kräver nyare patchnivå
 ENV GOTOOLCHAIN=auto
@@ -20,33 +20,26 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Kopiera resten av koden
 COPY . .
 
-# CGO krävs för github.com/mattn/go-sqlite3
-ENV CGO_ENABLED=1
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-    apt-get -o Acquire::Retries=5 update && \
-    apt-get -o Acquire::Retries=5 install -y --no-install-recommends build-essential ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Bygg endast main i rot (viktigt: inte ./...)
+# Bygg statisk binär utan CGO (pure-Go sqlite)
+ENV CGO_ENABLED=0
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags="-s -w" -o /xmatches .
+    go build -ldflags="-s -w" -o /out/xmatches .
+
+# Skapa tomma kataloger att kopiera till runtime (distroless saknar shell)
+RUN mkdir -p /out/app /out/data
 
 # ---------- Runtime stage ----------
-FROM debian:bookworm-slim
-
-# Tidszoner + cert (bra i container)
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-    apt-get -o Acquire::Retries=5 update && \
-    apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates tzdata && \
-    rm -rf /var/lib/apt/lists/*
+FROM gcr.io/distroless/static-debian12:nonroot
 
 WORKDIR /app
 
 # Körbar binär
-COPY --from=build /xmatches /usr/local/bin/xmatches
+COPY --from=build /out/xmatches /usr/local/bin/xmatches
+
+# Skapa skrivbara kataloger (kopieras från build)
+COPY --from=build /out/data /data
+COPY --from=build /out/app /app
 
 # Standard-ENV (kan override:as)
 ENV ADDR=:8080
@@ -56,4 +49,5 @@ ENV DB_PATH=/data/xmatches.db
 VOLUME ["/data"]
 
 EXPOSE 8080
-CMD ["xmatches"]
+USER nonroot:nonroot
+CMD ["/usr/local/bin/xmatches"]
