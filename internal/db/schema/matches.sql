@@ -22,5 +22,7 @@ CREATE TABLE IF NOT EXISTS matches (
     played         INTEGER DEFAULT 0, -- 0/1
     goals_for      INTEGER,
     goals_against  INTEGER,
-    player_notes   TEXT
+    player_notes   TEXT,
+    top_scorer_team TEXT,
+    top_scorer_opponent TEXT
 );

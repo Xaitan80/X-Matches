@@ -84,32 +84,34 @@ func (r *Repository) Create(ctx context.Context, m Match) (dbpkg.Match, error) {
 		endISO = ParseLocalISO(m.DateRaw, m.EndTimeRaw)
 	}
 
-	row, err := r.q.CreateMatch(ctx, dbpkg.CreateMatchParams{
-		StartIso:     startISO,           // *string
-		EndIso:       endISO,             // *string
-		DateRaw:      pstr(m.DateRaw),    // *string
-		TimeRaw:      pstr(m.TimeRaw),    // *string
-		EndTimeRaw:   pstr(m.EndTimeRaw), // *string
-		Weekday:      pstr(m.Weekday),
-		League:       pstr(m.League),
-		Team:         pstr(m.Team),
-		Opponent:     pstr(m.Opponent),
-		HomeTeam:     pstr(m.HomeTeam),
-		AwayTeam:     pstr(m.AwayTeam),
-		Venue:        pstr(m.Venue),
-		Court:        pstr(m.Court),
-		City:         pstr(m.City),
-		GatherTime:   pstr(m.GatherTime),
-		GatherPlace:  pstr(m.GatherPlace),
-		MatchNumber:  pstr(m.MatchNumber),
-		Referees:     pstr(m.Referees),
-		Notes:        pstr(m.Notes),
-		Played:       pPlayed(m.Played),       // *int64 (0/1)
-		GoalsFor:     pI64ZeroNil(m.GoalsFor), // *int64
-		GoalsAgainst: pI64ZeroNil(m.GoalsAgainst),
-		PlayerNotes:  pstr(m.PlayerNotes),
-	})
-	return row, err
+    row, err := r.q.CreateMatch(ctx, dbpkg.CreateMatchParams{
+        StartIso:     startISO,           // *string
+        EndIso:       endISO,             // *string
+        DateRaw:      pstr(m.DateRaw),    // *string
+        TimeRaw:      pstr(m.TimeRaw),    // *string
+        EndTimeRaw:   pstr(m.EndTimeRaw), // *string
+        Weekday:      pstr(m.Weekday),
+        League:       pstr(m.League),
+        Team:         pstr(m.Team),
+        Opponent:     pstr(m.Opponent),
+        HomeTeam:     pstr(m.HomeTeam),
+        AwayTeam:     pstr(m.AwayTeam),
+        Venue:        pstr(m.Venue),
+        Court:        pstr(m.Court),
+        City:         pstr(m.City),
+        GatherTime:   pstr(m.GatherTime),
+        GatherPlace:  pstr(m.GatherPlace),
+        MatchNumber:  pstr(m.MatchNumber),
+        Referees:     pstr(m.Referees),
+        Notes:        pstr(m.Notes),
+        Played:       pPlayed(m.Played),       // *int64 (0/1)
+        GoalsFor:     pI64ZeroNil(m.GoalsFor), // *int64
+        GoalsAgainst: pI64ZeroNil(m.GoalsAgainst),
+        PlayerNotes:  pstr(m.PlayerNotes),
+        TopScorerTeam: pstr(m.TopScorerTeam),
+        TopScorerOpponent: pstr(m.TopScorerOpponent),
+    })
+    return row, err
 }
 
 func (r *Repository) Update(ctx context.Context, id int64, m Match) (dbpkg.Match, error) {
@@ -137,7 +139,10 @@ func (r *Repository) Update(ctx context.Context, id int64, m Match) (dbpkg.Match
 	out.MatchNumber = pstrKeep(m.MatchNumber, cur.MatchNumber)
 	out.Referees = pstrKeep(m.Referees, cur.Referees)
 	out.Notes = pstrKeep(m.Notes, cur.Notes)
-	out.PlayerNotes = pstrKeep(m.PlayerNotes, cur.PlayerNotes)
+    out.PlayerNotes = pstrKeep(m.PlayerNotes, cur.PlayerNotes)
+    // Toppskyttar
+    out.TopScorerTeam = pstrKeep(m.TopScorerTeam, cur.TopScorerTeam)
+    out.TopScorerOpponent = pstrKeep(m.TopScorerOpponent, cur.TopScorerOpponent)
 
 	// Played/mål – sätt om inkommande värden är "meningsfulla"
 	// (Vi tolkar Goals* = 0 som "lämna som är")
@@ -161,32 +166,34 @@ func (r *Repository) Update(ctx context.Context, id int64, m Match) (dbpkg.Match
 		endISO = ParseLocalISO(sval(out.DateRaw), sval(out.EndTimeRaw))
 	}
 
-	return r.q.UpdateMatch(ctx, dbpkg.UpdateMatchParams{
-		StartIso:     startISO,
-		EndIso:       endISO,
-		DateRaw:      out.DateRaw,
-		TimeRaw:      out.TimeRaw,
-		EndTimeRaw:   out.EndTimeRaw,
-		Weekday:      out.Weekday,
-		League:       out.League,
-		Team:         out.Team,
-		Opponent:     out.Opponent,
-		HomeTeam:     out.HomeTeam,
-		AwayTeam:     out.AwayTeam,
-		Venue:        out.Venue,
-		Court:        out.Court,
-		City:         out.City,
-		GatherTime:   out.GatherTime,
-		GatherPlace:  out.GatherPlace,
-		MatchNumber:  out.MatchNumber,
-		Referees:     out.Referees,
-		Notes:        out.Notes,
-		Played:       out.Played,
-		GoalsFor:     out.GoalsFor,
-		GoalsAgainst: out.GoalsAgainst,
-		PlayerNotes:  out.PlayerNotes,
-		ID:           id,
-	})
+    return r.q.UpdateMatch(ctx, dbpkg.UpdateMatchParams{
+        StartIso:     startISO,
+        EndIso:       endISO,
+        DateRaw:      out.DateRaw,
+        TimeRaw:      out.TimeRaw,
+        EndTimeRaw:   out.EndTimeRaw,
+        Weekday:      out.Weekday,
+        League:       out.League,
+        Team:         out.Team,
+        Opponent:     out.Opponent,
+        HomeTeam:     out.HomeTeam,
+        AwayTeam:     out.AwayTeam,
+        Venue:        out.Venue,
+        Court:        out.Court,
+        City:         out.City,
+        GatherTime:   out.GatherTime,
+        GatherPlace:  out.GatherPlace,
+        MatchNumber:  out.MatchNumber,
+        Referees:     out.Referees,
+        Notes:        out.Notes,
+        Played:       out.Played,
+        GoalsFor:     out.GoalsFor,
+        GoalsAgainst: out.GoalsAgainst,
+        PlayerNotes:  out.PlayerNotes,
+        TopScorerTeam: out.TopScorerTeam,
+        TopScorerOpponent: out.TopScorerOpponent,
+        ID:           id,
+    })
 }
 
 func (r *Repository) Delete(ctx context.Context, id int64) error {

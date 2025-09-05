@@ -7,6 +7,7 @@ on:
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,8 +29,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up QEMU (multi-arch emulation)
+        if: env.PLATFORMS != 'linux/amd64'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -41,10 +45,20 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            # Keep metadata-action defaults; we'll append :latest on main explicitly below
             type=ref,event=branch
             type=ref,event=tag
             type=sha
+
+      - name: Compute tag list (append :latest on main)
+        id: tags
+        run: |
+          echo "list<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            echo "${IMAGE_NAME}:latest" >> $GITHUB_OUTPUT
+          fi
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
@@ -60,7 +74,9 @@ jobs:
           file: ./Dockerfile
           platforms: ${{ env.PLATFORMS }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          provenance: false
+          sbom: false
+          tags: ${{ steps.tags.outputs.list }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
