@@ -41,8 +41,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # xaitan
+          password: ${{ secrets.DOCKERHUB_TOKEN }}    # PAT från Docker Hub
 
       - name: Build & (conditionally) push
         uses: docker/build-push-action@v6
@@ -55,3 +55,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            GOPROXY_DEFAULT=https://proxy.golang.org,direct
