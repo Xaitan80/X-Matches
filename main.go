@@ -1,14 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"embed"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/xaitan80/X-Matches/internal/db"
+	dbpkg "github.com/xaitan80/X-Matches/internal/db"
 	"github.com/xaitan80/X-Matches/internal/matches"
 )
 
@@ -18,10 +20,23 @@ var webFS embed.FS
 func main() {
 	dsn := env("DB_PATH", "xmatches.db")
 
-	d := db.Open(dsn)
-	db.AutoMigrate(d, &matches.Match{})
+	// Öppna DB
+	sqlDB, err := sql.Open("sqlite3", dsn)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	defer sqlDB.Close()
 
-	repo := matches.NewRepo(d)
+	// Migrera (goose via embed)
+	if err := dbpkg.Migrate(sqlDB); err != nil {
+		log.Fatalf("migrate: %v", err)
+	}
+
+	// Init sqlc-queries
+	q := dbpkg.New(sqlDB)
+	repo := matches.NewRepository(q)
+
+	// HTTP
 	r := gin.Default()
 
 	// API
