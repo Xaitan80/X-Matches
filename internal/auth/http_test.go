@@ -115,6 +115,8 @@ func TestRegister_ShortPassword(t *testing.T) {
 func TestRegister_NormalizeAndSuccess(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy to consume first-admin logic so assertions aren't affected
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123"})
     // Lowercasing + trimming
     w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"  USER@Example.COM  ", "password":"123456789012"})
     if w.Code != http.StatusCreated {
@@ -242,6 +244,8 @@ func TestAdmin_ListUsers_Gating(t *testing.T) {
     t.Setenv("COOKIE_SECURE", "false")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // create a dummy first user so they receive admin automatically
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"123456789012"})
     // create a normal user and login
     _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user1@example.com", "password":"123456789012"})
     ckUser := loginAndGetCookie(t, r, "user1@example.com", "123456789012")
@@ -262,6 +266,8 @@ func TestAdmin_ResetPassword_Flow(t *testing.T) {
     t.Setenv("ADMIN_EMAILS", "root@example.com")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy first user gets auto-admin so target won't
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123"})
     // create target user
     w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"target@example.com", "password":"oldpassword123"})
     if w.Code != http.StatusCreated { t.Fatalf("register target failed: %d", w.Code) }
@@ -297,6 +303,8 @@ func TestAdmin_SetAdminFlag_Flow(t *testing.T) {
     t.Setenv("ADMIN_EMAILS", "root@example.com")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy first user gets auto-admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123"})
     // create normal user and admin
     _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user2@example.com", "password":"strongpass123"})
     _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass"})
@@ -329,6 +337,8 @@ func TestAdmin_DeleteUser_Flow(t *testing.T) {
     t.Setenv("ADMIN_EMAILS", "root@example.com")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy first user gets auto-admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123"})
     // create target and admin
     _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"bye@example.com", "password":"strongpass123"})
     _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass"})
