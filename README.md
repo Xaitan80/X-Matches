@@ -136,12 +136,12 @@ docker run --rm --user 0:0 -p 8080:8080 -v xmatches-data:/data -e DB_PATH=/data/
 - Lista matcher: `GET /api/matches`
 - Exportera CSV: `GET /api/matches.csv` (laddar ner `matches_YYYY-MM-DD.csv`)
 - Exportera iCal: `GET /api/matches.ics` (prenumerera i kalender)
-- Importera: `POST /api/matches/import` (multipart med `file` – `.csv` eller `.xlsx`)
+- Importera: `POST /api/matches/import` (multipart med `file` – `.csv` eller `.xlsx`, kräver inloggning)
   - Valfri query: `our_team=H43%20Lund%20HF` för att sätta vilket lag som ska tolkas som "vårt" vid import (hemma/borta mappas till team/opponent utifrån detta)
 - Hämta match: `GET /api/matches/:id`
-- Skapa match: `POST /api/matches`
-- Uppdatera match: `PATCH /api/matches/:id`
-- Radera match: `DELETE /api/matches/:id`
+- Skapa match: `POST /api/matches` (kräver inloggning)
+- Uppdatera match: `PATCH /api/matches/:id` (kräver inloggning)
+- Radera match: `DELETE /api/matches/:id` (kräver inloggning)
 
 Minimal `POST`‑exempel:
 

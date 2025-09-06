@@ -53,18 +53,35 @@ func main() {
     }
 
     // API
-    matches.RegisterRoutes(r, repo)
     auth.RegisterRoutes(r, sqlDB)
+    // Auth-aware frontend routing
+    authRepo := auth.NewRepository(sqlDB)
+    matches.RegisterRoutes(r, repo, auth.AuthRequired(authRepo))
 
-    // Enkel frontend
-	r.GET("/", func(c *gin.Context) {
-		f, err := webFS.ReadFile("web/index.html")
-		if err != nil {
-			c.String(http.StatusInternalServerError, "missing index")
-			return
-		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", f)
-	})
+    // Auth-aware frontend routing
+
+    // Redirect root based on session
+    r.GET("/", func(c *gin.Context) {
+        if _, ok := auth.CurrentUser(c, authRepo); ok {
+            c.Redirect(http.StatusFound, "/app")
+            return
+        }
+        c.Redirect(http.StatusFound, "/login")
+    })
+
+    // Public login page
+    r.GET("/login", func(c *gin.Context) {
+        f, err := webFS.ReadFile("web/login.html")
+        if err != nil { c.String(http.StatusInternalServerError, "missing login"); return }
+        c.Data(http.StatusOK, "text/html; charset=utf-8", f)
+    })
+
+    // Protected app page
+    r.GET("/app", auth.AuthRequired(authRepo), func(c *gin.Context) {
+        f, err := webFS.ReadFile("web/app.html")
+        if err != nil { c.String(http.StatusInternalServerError, "missing app"); return }
+        c.Data(http.StatusOK, "text/html; charset=utf-8", f)
+    })
 
 	addr := env("ADDR", ":8080")
     // Liveness/Readiness
@@ -77,9 +94,9 @@ func main() {
     })
 
     log.Printf("Lyssnar på %s", addr)
-	if err := r.Run(addr); err != nil {
-		log.Fatal(err)
-	}
+    if err := r.Run(addr); err != nil {
+        log.Fatal(err)
+    }
 }
 
 func env(k, def string) string {

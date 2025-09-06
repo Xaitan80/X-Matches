@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="sv">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Logga in – X‑Matches</title>
+<style>
+  body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0a2540; background:linear-gradient(180deg,#b0ddff 0%,#e6f3ff 60%);} 
+  .wrap{ max-width:420px; margin:8vh auto; padding: 0 1rem; }
+  .card{ background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(2,12,27,.08); padding:1.25rem; }
+  h1{ margin:.2rem 0 .8rem; font-size:1.35rem }
+  label{ display:block; margin:.45rem 0 .2rem; color:#4c5d73; font-size:.92rem }
+  input{ width:100%; padding:.6rem .7rem; border-radius:10px; border:2px solid #b3d4ff; box-sizing:border-box; }
+  input:focus{ outline:none; border-color:#1e66ff; box-shadow:0 0 0 4px rgba(30,102,255,.25) }
+  button{ margin-top:.8rem; width:100%; background:#1e66ff; color:#fff; font-weight:700; padding:.65rem .9rem; border:0; border-radius:12px; cursor:pointer }
+  .muted{ color:#4c5d73; font-size:.92rem; text-align:center; margin-top:.6rem }
+  .err{ background:#fee2e2; color:#991b1b; padding:.5rem .7rem; border-radius:10px; margin:.5rem 0; display:none }
+  .ok{ background:#d1fadf; color:#065f46; padding:.5rem .7rem; border-radius:10px; margin:.5rem 0; display:none }
+  .top{ display:flex; align-items:center; justify-content:space-between }
+  a{ color:#1e66ff; text-decoration:none }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div class="top"><h1>Logga in</h1> <a href="/">Hem</a></div>
+    <div id="err" class="err"></div>
+    <form id="f">
+      <label for="email">E‑post</label>
+      <input id="email" type="email" autocomplete="username" required />
+      <label for="pw">Lösenord</label>
+      <input id="pw" type="password" autocomplete="current-password" minlength="12" required />
+      <button type="submit">Logga in</button>
+    </form>
+    <div class="muted">Har du inget konto? <a id="registerLink" href="#">Registrera</a></div>
+  </div>
+</div>
+
+<script>
+  const err = document.getElementById('err');
+  const showErr = (m)=>{ err.textContent = m; err.style.display = 'block' };
+
+  document.getElementById('f').addEventListener('submit', async (e)=>{
+    e.preventDefault(); err.style.display = 'none';
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('pw').value;
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+    if (!res.ok){ showErr('Fel e‑post eller lösenord.'); return }
+    window.location = '/app';
+  });
+
+  document.getElementById('registerLink').addEventListener('click', async (e)=>{
+    e.preventDefault(); err.style.display='none';
+    const email = prompt('E‑post:'); if (!email) return;
+    const pw = prompt('Lösenord (minst 12 tecken):'); if (!pw) return;
+    if (pw.length < 12){ showErr('Lösenordet måste vara minst 12 tecken.'); return; }
+    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pw }) });
+    if (!res.ok){ const t = await res.json().catch(()=>({error:'Registrering misslyckades'})); showErr(t.error||'Registrering misslyckades'); return; }
+    alert('Konto skapat! Logga nu in.');
+  });
+
+  // If already logged in, bounce to /app
+  (async ()=>{
+    try { const r = await fetch('/api/auth/me'); if (r.ok) { window.location='/app'; } } catch {}
+  })();
+</script>
+</html>

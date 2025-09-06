@@ -279,6 +279,10 @@
     <div id="cards"></div>
   </div>
   <div id="toast"></div>
+  <div class="card" style="display:flex; gap:.5rem; align-items:center; justify-content:space-between">
+    <div id="me"></div>
+    <button id="logoutBtn" class="btn btn-outline">Logga ut</button>
+  </div>
 </div>
 
 <script>
@@ -365,93 +369,109 @@
       const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
       const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
       const tr = document.createElement('tr');
+      
       tr.innerHTML = `
         <td>${dateStr}</td>
         <td>${timeStr}</td>
-        <td>${m.team||''}</td>
-        <td>${m.opponent||m.home_team||m.away_team||''}</td>
+        <td>${m.home_team||m.team||''}</td>
+        <td>${m.away_team||m.opponent||''}</td>
         <td>${[m.venue,m.city].filter(Boolean).join(', ')}</td>
-        <td>${(m.goals_for??'') + (m.goals_for!==null?' – ':'') + (m.goals_against??'')}</td>
-        <td>${[m.top_scorer_team, m.top_scorer_opponent].filter(Boolean).join(' / ')}</td>
-        <td><span class="badge ${m.played?'played':''}">${m.played?'Ja':'Nej'}</span></td>
-        <td>
-          <div class="actions">
-            <button data-id="${m.id}" class="btn btn-outline playBtn">${m.played?'Markera ej spelad':'Markera spelad'}</button>
-            <button data-id="${m.id}" class="btn btn-outline scoreBtn" title="Redigera resultat">Redigera resultat</button>
-            <button data-id="${m.id}" data-tst="${m.top_scorer_team||''}" data-tso="${m.top_scorer_opponent||''}" class="btn btn-outline editScorerBtn" title="Redigera skyttar">Redigera skyttar</button>
-            <button data-id="${m.id}" class="btn btn-danger delBtn">Radera</button>
-          </div>
-        </td>
-      `;
+        <td>${(m.goals_for??'')!=='' || (m.goals_against??'')!=='' ? `${m.goals_for||''}–${m.goals_against||''}` : ''}</td>
+        <td>${[m.top_scorer_team,m.top_scorer_opponent].filter(Boolean).join(' | ')}</td>
+        <td>${m.played?'<span class="badge played">Spelad</span>':''}</td>
+        <td class="actions">
+          <button class="btn btn-outline editBtn" data-id="${m.id}">Ändra</button>
+          <button class="btn btn-outline scoreBtn" data-id="${m.id}">Resultat</button>
+          <button class="btn btn-danger delBtn" data-id="${m.id}">Radera</button>
+          <button class="btn btn-outline topscorerBtn" data-id="${m.id}">Toppskytt</button>
+        </td>`;
+
       tb.appendChild(tr);
     });
 
-    // Render cards view with date grouping
-    const cards = document.getElementById('cards');
-    cards.innerHTML = '';
-    let lastDate = '';
+    // Cards render
+    const cardsEl = document.getElementById('cards');
+    cardsEl.innerHTML = '';
     filtered.forEach(m => {
       const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
-      const dateStr = d ? d.toLocaleDateString('sv-SE',{weekday:'long', year:'numeric', month:'short', day:'numeric'}) : (m.date_raw||'');
-      if (dateStr && dateStr !== lastDate){
-        const h = document.createElement('h3');
-        h.textContent = dateStr;
-        h.style.margin = '0 0 .5rem';
-        cards.appendChild(h);
-        lastDate = dateStr;
-      }
+      const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
       const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
+        <div style="display:flex; justify-content:space-between; align-items:center">
           <div>
-            <div style="font-weight:700; font-size:1.05rem">${m.team||m.home_team||''} ${m.opponent||m.away_team? '– '+(m.opponent||m.away_team):''}</div>
-            <div style="color:var(--muted)">${timeStr} • ${[m.venue,m.city].filter(Boolean).join(', ')}</div>
+            <div style="font-size:.95rem; color:var(--muted)">${dateStr} ${timeStr}</div>
+            <div style="font-size:1.1rem; font-weight:700">${m.home_team||m.team||''} – ${m.away_team||m.opponent||''}</div>
+            <div style="color:var(--muted)">${[m.venue,m.city].filter(Boolean).join(', ')}</div>
           </div>
-          <div class="actions">
-            <button data-id="${m.id}" class="btn btn-outline playBtn" title="Markera spelad/ej spelad">${m.played?'Ej spelad':'Markera spelad'}</button>
-            <button data-id="${m.id}" class="btn btn-outline scoreBtn" title="Redigera resultat">Resultat</button>
-          </div>
+          <div>${(m.goals_for??'')!=='' || (m.goals_against??'')!=='' ? `<span class="badge">${m.goals_for||''}–${m.goals_against||''}</span>` : ''}</div>
         </div>
-        <div style="margin-top:.4rem; color:var(--muted)">Toppskyttar: ${[m.top_scorer_team, m.top_scorer_opponent].filter(Boolean).join(' / ')||'—'}</div>
-      `;
-      cards.appendChild(card);
+        <div class="actions" style="margin-top:.6rem">
+          <button class="btn btn-outline editBtn" data-id="${m.id}">Ändra</button>
+          <button class="btn btn-outline scoreBtn" data-id="${m.id}">Resultat</button>
+          <button class="btn btn-danger delBtn" data-id="${m.id}">Radera</button>
+        </div>`;
+      cardsEl.appendChild(card);
     });
 
-    document.querySelectorAll('.playBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        const row = [...tb.children].find(tr => tr.querySelector(`[data-id="${id}"]`));
-        const played = row.querySelector('.badge').textContent === 'Nej';
-        await fetch(`/api/matches/${id}`, {
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ played })
-        });
-        toast('Uppdaterade spelad');
-        list();
-      });
-    });
-
+    // Bind edit/delete actions
     document.querySelectorAll('.delBtn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!confirm('Radera match?')) return;
+        if (!confirm('Radera denna match?')) return;
         await fetch(`/api/matches/${id}`, { method:'DELETE' });
         toast('Raderade match');
         list();
       });
     });
 
-    document.querySelectorAll('.editScorerBtn').forEach(btn => {
+    document.querySelectorAll('.editBtn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        const curTeam = btn.getAttribute('data-tst') || '';
-        const curOpp = btn.getAttribute('data-tso') || '';
-        const team = prompt('Bästa målskytt – vårt lag', curTeam);
+        const res = await fetch(`/api/matches/${id}`);
+        const m = await res.json();
+        document.querySelector('#date').value = (m.start_iso ? new Date(m.start_iso).toISOString().slice(0,10) : (m.date_raw||''));
+        document.querySelector('#time').value = (m.start_iso ? new Date(m.start_iso).toISOString().slice(11,16) : (m.time_raw||''));
+        document.querySelector('#end_time').value = m.end_time_raw||'';
+        document.querySelector('#team').value = m.team||'';
+        document.querySelector('#opponent').value = m.opponent||'';
+        document.querySelector('#venue').value = m.venue||'';
+        document.querySelector('#city').value = m.city||'';
+        document.querySelector('#league').value = m.league||'';
+        document.querySelector('#court').value = m.court||'';
+        document.querySelector('#notes').value = m.notes||'';
+        document.querySelector('#top_scorer_team').value = m.top_scorer_team||'';
+        document.querySelector('#top_scorer_opponent').value = m.top_scorer_opponent||'';
+        // Save update
+        const ok = confirm('Spara ändringar?');
+        if (!ok) return;
+        const body = {
+          date_raw: document.querySelector('#date').value,
+          time_raw: document.querySelector('#time').value,
+          end_time_raw: document.querySelector('#end_time').value,
+          team: document.querySelector('#team').value,
+          opponent: document.querySelector('#opponent').value,
+          venue: document.querySelector('#venue').value,
+          city: document.querySelector('#city').value,
+          league: document.querySelector('#league').value,
+          court: document.querySelector('#court').value,
+          notes: document.querySelector('#notes').value,
+          top_scorer_team: document.querySelector('#top_scorer_team').value,
+          top_scorer_opponent: document.querySelector('#top_scorer_opponent').value
+        };
+        await fetch(`/api/matches/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        toast('Uppdaterade match');
+        list();
+      });
+    });
+
+    document.querySelectorAll('.topscorerBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const team = prompt('Toppskytt – vårt lag', '');
         if (team === null) return; // cancelled
-        const opp = prompt('Bästa målskytt – motstånd', curOpp);
+        const opp = prompt('Toppskytt – motstånd', '');
         if (opp === null) return; // cancelled
         await fetch(`/api/matches/${id}`, {
           method:'PATCH',
@@ -459,20 +479,6 @@
           body: JSON.stringify({ top_scorer_team: team, top_scorer_opponent: opp })
         });
         toast('Uppdaterade toppskyttar');
-        list();
-      });
-    });
-
-    document.querySelectorAll('.scoreBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        const gf = prompt('Mål – vårt lag', ''); if (gf===null) return;
-        const ga = prompt('Mål – motstånd', ''); if (ga===null) return;
-        const body = { played:true };
-        if (gf!=='' && !isNaN(parseInt(gf))) body.goals_for = parseInt(gf);
-        if (ga!=='' && !isNaN(parseInt(ga))) body.goals_against = parseInt(ga);
-        await fetch(`/api/matches/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-        toast('Uppdaterade resultat');
         list();
       });
     });
@@ -546,6 +552,22 @@
   bindUI();
   list();
 
+  // show current user and enable logout
+  (async ()=>{
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const me = await res.json();
+        document.getElementById('me').textContent = `Inloggad som ${me.email}`;
+      }
+    } catch {}
+  })();
+
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+    await fetch('/api/auth/logout', { method:'POST' });
+    window.location = '/login';
+  });
+
   function toast(msg){
     const host = document.getElementById('toast');
     const el = document.createElement('div');
@@ -560,3 +582,4 @@
   }
 </script>
 </html>
+
