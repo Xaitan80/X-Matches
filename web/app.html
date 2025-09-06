@@ -209,9 +209,11 @@
     <button id="menuBtn" class="menu-btn" aria-haspopup="true" aria-expanded="false" title="Meny">⋯</button>
     <div id="menuPanel" class="menu-panel" style="display:none">
       <div id="menuMe" class="menu-me"></div>
-      <a id="menuAdmin" href="/admin" class="menu-item" style="display:none">Admin</a>
-      <button id="menuLogout" class="menu-item">Logga ut</button>
-    </div>
+  <a id="menuAdmin" href="/admin" class="menu-item" style="display:none">Admin</a>
+  <button id="menuChangeEmail" class="menu-item">Byt e‑post</button>
+  <button id="menuChangePw" class="menu-item">Byt lösenord</button>
+  <button id="menuLogout" class="menu-item">Logga ut</button>
+</div>
     <div class="toolbar">
       <div>
         <h1>Matcher</h1>
@@ -647,6 +649,8 @@
     const btn = document.getElementById('menuBtn');
     const panel = document.getElementById('menuPanel');
     const logout = document.getElementById('menuLogout');
+    const changeEmail = document.getElementById('menuChangeEmail');
+    const changePw = document.getElementById('menuChangePw');
     if (btn && panel){
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -663,6 +667,29 @@
       logout.addEventListener('click', async ()=>{
         await fetch('/api/auth/logout', { method:'POST' });
         window.location = '/login';
+      });
+    }
+
+    if (changeEmail){
+      changeEmail.addEventListener('click', async ()=>{
+        const email = prompt('Ny e‑post:'); if (!email) return;
+        const pw = prompt('Bekräfta med ditt lösenord:'); if (pw===null) return;
+        const res = await fetch('/api/auth/me/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ new_email: email, password: pw }) });
+        if (!res.ok){ const t = await res.json().catch(()=>({error:'Uppdatering misslyckades'})); alert(t.error||'Uppdatering misslyckades'); return; }
+        alert('E‑post uppdaterad. Logga gärna in igen om det behövs.');
+        panel.style.display='none';
+      });
+    }
+
+    if (changePw){
+      changePw.addEventListener('click', async ()=>{
+        const curr = prompt('Nuvarande lösenord:'); if (curr===null) return;
+        const npw = prompt('Nytt lösenord (minst 12 tecken):'); if (npw===null) return; if (npw.length<12){ alert('För kort.'); return; }
+        const npw2 = prompt('Upprepa nytt lösenord:'); if (npw2===null) return; if (npw!==npw2){ alert('Lösenorden matchar inte.'); return; }
+        const res = await fetch('/api/auth/me/password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ current_password: curr, new_password: npw, new_password_confirm: npw2 }) });
+        if (!res.ok){ const t = await res.json().catch(()=>({error:'Uppdatering misslyckades'})); alert(t.error||'Uppdatering misslyckades'); return; }
+        alert('Lösenord uppdaterat.');
+        panel.style.display='none';
       });
     }
   })();

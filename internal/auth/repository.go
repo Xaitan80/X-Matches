@@ -183,7 +183,12 @@ func (r *Repository) DeleteUser(ctx context.Context, userID int64) error {
 }
 
 func (r *Repository) CountOtherAdmins(ctx context.Context, excludeID int64) (int64, error) {
-	var n int64
-	err := r.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM users WHERE is_admin = 1 AND id != ?`, excludeID).Scan(&n)
-	return n, err
+    var n int64
+    err := r.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM users WHERE is_admin = 1 AND id != ?`, excludeID).Scan(&n)
+    return n, err
+}
+
+func (r *Repository) UpdateEmail(ctx context.Context, userID int64, email string) error {
+    _, err := r.db.ExecContext(ctx, `UPDATE users SET email = ? WHERE id = ?`, email, userID)
+    return err
 }
