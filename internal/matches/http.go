@@ -145,11 +145,11 @@ func toDomain(req createOrUpdateReq) Match {
 
 // ----- Routes -----
 
-func RegisterRoutes(r *gin.Engine, repo *Repository) {
+func RegisterRoutes(r *gin.Engine, repo *Repository, protect gin.HandlerFunc) {
     api := r.Group("/api")
     {
-        // Import matches from CSV or XLSX
-        api.POST("/matches/import", func(c *gin.Context) {
+        // Import matches from CSV or XLSX (protected)
+        api.POST("/matches/import", attachProtect(protect, func(c *gin.Context) {
             if err := c.Request.ParseMultipartForm(12 << 20); err != nil { // 12MB
                 c.JSON(http.StatusBadRequest, gin.H{"error":"multipart too large"}); return
             }
@@ -171,17 +171,17 @@ func RegisterRoutes(r *gin.Engine, repo *Repository) {
                 }
             }
             c.JSON(http.StatusOK, gin.H{"imported": imported, "failed": len(errs), "errors": errs})
-        })
+        }))
 
         // Delete all matches (dangerous)
-        api.DELETE("/matches", func(c *gin.Context) {
+        api.DELETE("/matches", attachProtect(protect, func(c *gin.Context) {
             n, err := repo.DeleteAll(c.Request.Context())
             if err != nil {
                 c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
                 return
             }
             c.JSON(http.StatusOK, gin.H{"deleted": n})
-        })
+        }))
 
         // iCal export of all matches
         api.GET("/matches.ics", func(c *gin.Context) {
@@ -332,7 +332,7 @@ func RegisterRoutes(r *gin.Engine, repo *Repository) {
 			c.JSON(http.StatusOK, toAPI(m))
 		})
 
-		api.POST("/matches", func(c *gin.Context) {
+		api.POST("/matches", attachProtect(protect, func(c *gin.Context) {
 			var req createOrUpdateReq
 			if err := c.BindJSON(&req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "bad json"})
@@ -344,9 +344,9 @@ func RegisterRoutes(r *gin.Engine, repo *Repository) {
 				return
 			}
 			c.JSON(http.StatusCreated, toAPI(row))
-		})
+		}))
 
-		api.PATCH("/matches/:id", func(c *gin.Context) {
+		api.PATCH("/matches/:id", attachProtect(protect, func(c *gin.Context) {
 			id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 			var req createOrUpdateReq
 			if err := c.BindJSON(&req); err != nil {
@@ -359,15 +359,26 @@ func RegisterRoutes(r *gin.Engine, repo *Repository) {
 				return
 			}
 			c.JSON(http.StatusOK, toAPI(row))
-		})
+		}))
 
-		api.DELETE("/matches/:id", func(c *gin.Context) {
+		api.DELETE("/matches/:id", attachProtect(protect, func(c *gin.Context) {
 			id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 			if err := repo.Delete(c.Request.Context(), id); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 			c.Status(http.StatusNoContent)
-		})
-	}
+		}))
+    }
+}
+
+// attachProtect conditionally wraps handlers with the given protect middleware for mutating routes.
+// We keep read routes public.
+func attachProtect(protect gin.HandlerFunc, h gin.HandlerFunc) gin.HandlerFunc {
+    if protect == nil { return h }
+    return func(c *gin.Context) {
+        protect(c)
+        if c.IsAborted() { return }
+        h(c)
+    }
 }
