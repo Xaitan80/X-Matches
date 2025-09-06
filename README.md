@@ -5,7 +5,7 @@
 
 # X‑Matches
 
-En liten app för att lägga in matcher, se dem i en enkel vy och uppdatera resultat. Backend är Go + SQLite, migrationer körs automatiskt vid start.
+En liten app för att lägga in matcher, se dem i en enkel vy och uppdatera resultat. Backend är Go + SQLite, migrationer körs automatiskt vid start. Detta är mitt första egna projekt, be nice!
 
 ## Köra lokalt
 
