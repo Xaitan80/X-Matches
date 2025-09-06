@@ -8,7 +8,14 @@
   html,body{ height:100% }
   body{
     margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:var(--ink);
-    background:url('/media/cum.jpeg') center/cover no-repeat fixed; /* embedded image */
+    /* Fallback color if media is missing */
+    background-color:#f2f4f7;
+    /* Try to load embedded image; if it fails, the color shows */
+    background-image:url('/media/bg.jpeg');
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:cover;
+    background-attachment:fixed;
   }
   .overlay{ min-height:100%; background: rgba(255,255,255,.72); display:flex; align-items:center; justify-content:center; padding:2rem 1rem }
   .card{ width:100%; max-width:440px; background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(2,12,27,.18); padding:1.25rem }
@@ -61,4 +68,3 @@
   });
 </script>
 </html>
-
