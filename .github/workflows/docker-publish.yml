@@ -1,12 +1,7 @@
 name: Build & Publish Docker (multi-arch)
 
 on:
-  push:
-    branches: ["main"]
-    tags: ["v*", "release-*"]
-  pull_request:
-    branches: ["main"]
-    types: [opened, synchronize, reopened]
+  # Disabled auto-publish during testing; run manually if needed
   workflow_dispatch:
 
 permissions:
@@ -60,20 +55,15 @@ jobs:
           fi
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }} # xaitan
-          password: ${{ secrets.DOCKERHUB_TOKEN }}    # PAT från Docker Hub
+      # Login step omitted while push is disabled
 
-      - name: Build & (conditionally) push
+      - name: Build (no push during testing)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: ${{ env.PLATFORMS }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: false
           provenance: false
           sbom: false
           tags: ${{ steps.tags.outputs.list }}

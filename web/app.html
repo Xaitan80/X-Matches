@@ -5,47 +5,47 @@
 <title>X-Matches – Matcher</title>
 <style>
   :root{
-    /* Light (default) */
-    --bg1:#b0ddff;          /* gradient top */
-    --bg2:#e6f3ff;          /* gradient bottom */
+    /* Light (default) – inspired by Apple Human Interface Guidelines */
+    --bg1:#f5f5f7;          /* neutral soft background */
+    --bg2:#ffffff;          /* subtle gradient */
     --card-bg:#ffffff;
-    --ink:#0a2540;
-    --muted:#4c5d73;
-    --border:#b3d4ff;
-    --primary:#1e66ff;
-    --primary-700:#154ecc;
-    --primary-ring: rgba(30,102,255,.25);
-    --danger:#ff4d4f;
-    --success-bg:#d1fadf;
-    --success-fg:#065f46;
-    --thead-grad-1:#f9fbff;
-    --thead-grad-2:#f3f7ff;
-    --row-hover:#f8fbff;
+    --ink:#111827;          /* near-black */
+    --muted:#6b7280;        /* cool gray */
+    --border:rgba(0,0,0,.08);
+    --primary:#0A84FF;      /* iOS system blue */
+    --primary-700:#0066cc;
+    --primary-ring: rgba(10,132,255,.25);
+    --danger:#FF3B30;       /* iOS system red */
+    --success-bg:#e7f8ee;
+    --success-fg:#0f5132;
+    --thead-grad-1:#fafafa;
+    --thead-grad-2:#f5f5f7;
+    --row-hover:#f9fafb;
     --input-bg:#ffffff;
     --table-bg:#ffffff;
-    --shadow:0 10px 30px rgba(2,12,27,.08);
+    --shadow:0 8px 24px rgba(0,0,0,.06);
   }
 
   /* Dark theme overrides */
   [data-theme="dark"]{
-    --bg1:#0b1220;
-    --bg2:#0e1729;
-    --card-bg:#0f172a;
-    --ink:#e2e8f0;
-    --muted:#94a3b8;
-    --border:#1e293b;
-    --primary:#60a5fa;
-    --primary-700:#3b82f6;
-    --primary-ring: rgba(96,165,250,.25);
-    --danger:#ef4444;
-    --success-bg:#064e3b;
-    --success-fg:#bbf7d0;
-    --thead-grad-1:#0b1220;
-    --thead-grad-2:#0e1729;
-    --row-hover:#0b1220;
-    --input-bg:#0b1220;
-    --table-bg:#0b1220;
-    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --bg1:#0b0b0d;
+    --bg2:#111113;
+    --card-bg:#161618;
+    --ink:#f3f4f6;
+    --muted:#a1a1aa;
+    --border:rgba(255,255,255,.09);
+    --primary:#0A84FF;
+    --primary-700:#66aaff;
+    --primary-ring: rgba(10,132,255,.28);
+    --danger:#FF453A;
+    --success-bg:#0b2f22;
+    --success-fg:#d1fae5;
+    --thead-grad-1:#141416;
+    --thead-grad-2:#121214;
+    --row-hover:#161618;
+    --input-bg:#111113;
+    --table-bg:#111113;
+    --shadow:0 10px 28px rgba(0,0,0,.45);
   }
 
   html,body{height:100%}
@@ -57,8 +57,28 @@
     transition: background .25s ease, color .2s ease;
   }
 
-  .container{ max-width:1100px; margin: clamp(1rem, 2vw, 2rem) auto; padding: 0 1rem; }
-  .card{ background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow); padding:1.25rem; margin-bottom:1rem; transition: background .25s ease, box-shadow .25s ease; }
+  .container{ max-width:1100px; margin: clamp(1rem, 4vw, 3rem) auto; padding: 0 1.25rem; }
+  .card{ background:var(--card-bg);
+         border-radius:20px;
+         box-shadow:var(--shadow);
+         padding:1.25rem 1.25rem 1rem;
+         margin-bottom:1rem;
+         border:1px solid var(--border);
+         transition: background .25s ease, box-shadow .25s ease, border-color .25s ease; }
+  /* Frosted glass style for top and footer cards */
+  .frosted{
+    background: rgba(255,255,255,.50);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border:1px solid rgba(0,0,0,.06);
+    box-shadow: 0 12px 30px rgba(0,0,0,.10);
+    position: relative; /* allow absolute-positioned menu inside */
+  }
+  [data-theme="dark"] .frosted{
+    background: rgba(22,22,24,.55);
+    border-color: rgba(255,255,255,.08);
+    box-shadow: 0 12px 34px rgba(0,0,0,.55);
+  }
 
   .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.75rem; flex-wrap:wrap; }
   .filters{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; width:100%; }
@@ -67,7 +87,7 @@
     .filters{ flex-direction: column; align-items: stretch; }
     .seg{ align-self:flex-start; }
   }
-  .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border:1px solid var(--border); border-radius:999px; background:var(--table-bg); }
+  .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .7rem; border:1px solid var(--border); border-radius:999px; background:var(--table-bg); }
   .chip{ white-space: nowrap; }
   .filters .chip + .chip{ margin-left:.6rem; }
   .filter-which{ display:flex; flex-direction:column; gap:.3rem; }
@@ -86,9 +106,9 @@
     color:#fff; border-color: transparent;
   }
   .filter-which input[type="radio"]{ margin-right:.35rem; }
-  .seg{ display:inline-flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; background: var(--table-bg); }
-  .seg button{ background:transparent; padding:.4rem .7rem; border:0; color: var(--ink); }
-  .seg button.active{ background: var(--primary); color:#fff; font-weight:600; }
+  .seg{ display:inline-flex; border:1px solid var(--border); border-radius:12px; overflow:hidden; background: var(--table-bg); }
+  .seg button{ background:transparent; padding:.45rem .9rem; border:0; color: var(--ink); font-weight:600; }
+  .seg button.active{ background: var(--primary); color:#fff; }
   h1{ margin:0; letter-spacing:.2px; }
   .sub{ color:var(--muted); margin:.25rem 0 0; }
 
@@ -97,13 +117,13 @@
   input, select, textarea{
     width:100%; padding:.6rem .7rem; box-sizing:border-box;
     background:var(--input-bg); color:var(--ink);
-    border:2px solid var(--border); border-radius:10px;
+    border:1px solid var(--border); border-radius:12px;
     transition:border-color .2s ease, box-shadow .2s ease, transform .06s ease, background .2s;
   }
   input:focus-visible, select:focus-visible, textarea:focus-visible{
     outline:none;
     border-color:var(--primary);
-    box-shadow:0 0 0 4px var(--primary-ring);
+    box-shadow:0 0 0 3px var(--primary-ring);
   }
   /* Do not apply text-input styles to radios/checkboxes */
   input[type="radio"], input[type="checkbox"]{
@@ -114,23 +134,21 @@
   /* Buttons */
   .btn{
     display:inline-flex; align-items:center; justify-content:center;
-    gap:.5rem; padding:.55rem .9rem; border-radius:12px;
+    gap:.5rem; padding:.55rem 1rem; border-radius:999px;
     font-weight:600; border:0; cursor:pointer;
     transition: transform .05s ease, box-shadow .2s ease, background .2s ease, border-color .2s;
     user-select:none;
   }
   .btn:active{ transform: translateY(1px); }
-  .btn-primary{
-    background:var(--primary); color:#fff; box-shadow:0 8px 20px rgba(30,102,255,.28);
-  }
+  .btn-primary{ background:var(--primary); color:#fff; box-shadow:0 6px 14px rgba(10,132,255,.22); }
   [data-theme="dark"] .btn-primary{ box-shadow: none; }
   .btn-primary:hover{ background:var(--primary-700); }
   .btn-outline{
-    background:transparent; color:var(--primary); border:2px solid var(--primary);
+    background:transparent; color:var(--primary); border:1.5px solid var(--primary);
   }
   .btn-outline:hover{ background:rgba(0,0,0,.03); }
   [data-theme="dark"] .btn-outline:hover{ background:rgba(255,255,255,.04); }
-  .btn-danger{ background:var(--danger); color:#fff; }
+  .btn-danger{ background:var(--danger); color:#fff; box-shadow:0 4px 10px rgba(255,59,48,.18); }
   .actions{ display:flex; gap:.5rem; flex-wrap:wrap; }
 
   /* Layout */
@@ -141,24 +159,45 @@
   }
 
   /* Table */
-  table{ border-collapse:separate; border-spacing:0; width:100%; background:var(--table-bg); border-radius:12px; overflow:hidden; }
+  table{ border-collapse:separate; border-spacing:0; width:100%; background:var(--table-bg); border-radius:16px; overflow:hidden; border:1px solid var(--border); }
   thead th{
     text-align:left; font-weight:700; font-size:.9rem; color:var(--muted);
     background: linear-gradient(var(--thead-grad-1), var(--thead-grad-2));
     position:sticky; top:0; z-index:1;
   }
-  th, td{ padding:.65rem .7rem; border-bottom:1px solid #e7eefc; }
+  th, td{ padding:.75rem .9rem; border-bottom:1px solid var(--border); }
   [data-theme="dark"] th, [data-theme="dark"] td{ border-bottom:1px solid var(--border); }
   tbody tr:hover td{ background:var(--row-hover); }
   .badge{
     display:inline-block; padding:.2rem .55rem; border-radius:999px; font-size:.8rem;
-    background:#eef; color:#1e40af;
+    background:rgba(10,132,255,.12); color:#0A84FF;
   }
+  /* Result coloring */
+  .badge.res.win{ background: rgba(52,199,89,.15); color:#34C759; }
+  .badge.res.loss{ background: rgba(255,59,48,.18); color:#FF3B30; }
+  .badge.res.draw{ background: rgba(255,204,0,.22); color:#8a6d00; }
   .played{ background:var(--success-bg); color:var(--success-fg); }
   /* Toast */
   #toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; z-index:9999; }
   .toast{ background:var(--card-bg); color:var(--ink); border:1px solid var(--border); padding:.6rem .9rem; border-radius:10px; box-shadow:var(--shadow); opacity:0; transition: opacity .2s, transform .2s; transform: translateY(6px); }
   .toast.show{ opacity:1; transform: translateY(0); }
+
+  /* Quick actions menu (top-right) */
+  .menu-btn{
+    position:absolute; top:12px; right:12px; z-index:10;
+    width:38px; height:38px; border-radius:12px; border:1px solid var(--border);
+    background:var(--card-bg); color:var(--ink); font-size:20px; line-height:1;
+    display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
+  }
+  .menu-panel{
+    position:absolute; top:52px; right:12px; z-index:10;
+    background:var(--card-bg); color:var(--ink); border:1px solid var(--border);
+    border-radius:14px; box-shadow:var(--shadow); padding:.5rem; min-width:220px;
+  }
+  .menu-item{ display:block; width:100%; text-align:left; padding:.5rem .6rem; border:0; background:transparent; color:var(--ink); border-radius:10px; cursor:pointer; text-decoration:none }
+  .menu-item:hover{ background:rgba(0,0,0,.04) }
+  [data-theme="dark"] .menu-item:hover{ background:rgba(255,255,255,.06) }
+  .menu-me{ padding:.4rem .6rem; color:var(--muted); font-size:.9rem }
 
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{ transition:none !important; animation:none !important; }
@@ -166,7 +205,13 @@
 </style>
 
 <div class="container">
-  <div class="card">
+  <div class="card frosted">
+    <button id="menuBtn" class="menu-btn" aria-haspopup="true" aria-expanded="false" title="Meny">⋯</button>
+    <div id="menuPanel" class="menu-panel" style="display:none">
+      <div id="menuMe" class="menu-me"></div>
+      <a id="menuAdmin" href="/admin" class="menu-item" style="display:none">Admin</a>
+      <button id="menuLogout" class="menu-item">Logga ut</button>
+    </div>
     <div class="toolbar">
       <div>
         <h1>Matcher</h1>
@@ -279,13 +324,6 @@
     <div id="cards"></div>
   </div>
   <div id="toast"></div>
-  <div class="card" style="display:flex; gap:.5rem; align-items:center; justify-content:space-between">
-    <div id="me"></div>
-    <div>
-      <a id="adminBtn" href="/admin" class="btn btn-outline" style="display:none; margin-right:.4rem">Admin</a>
-      <button id="logoutBtn" class="btn btn-outline">Logga ut</button>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -371,6 +409,15 @@
       const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
       const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
       const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
+      // compute result badge and class
+      let resBadge = '';
+      const gfN = parseInt(m.goals_for);
+      const gaN = parseInt(m.goals_against);
+      if (!isNaN(gfN) && !isNaN(gaN) && (m.played || (m.goals_for!=='' || m.goals_against!==''))){
+        let cls = 'draw';
+        if (gfN > gaN) cls = 'win'; else if (gfN < gaN) cls = 'loss';
+        resBadge = `<span class="badge res ${cls}">${(m.goals_for??'')||''}–${(m.goals_against??'')||''}</span>`;
+      }
       const tr = document.createElement('tr');
       
       tr.innerHTML = `
@@ -379,7 +426,7 @@
         <td>${m.home_team||m.team||''}</td>
         <td>${m.away_team||m.opponent||''}</td>
         <td>${[m.venue,m.city].filter(Boolean).join(', ')}</td>
-        <td>${(m.goals_for??'')!=='' || (m.goals_against??'')!=='' ? `${m.goals_for||''}–${m.goals_against||''}` : ''}</td>
+        <td>${resBadge}</td>
         <td>${[m.top_scorer_team,m.top_scorer_opponent].filter(Boolean).join(' | ')}</td>
         <td>${m.played?'<span class="badge played">Spelad</span>':''}</td>
         <td class="actions">
@@ -401,6 +448,15 @@
       const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
       const card = document.createElement('div');
       card.className = 'card';
+      // compute result badge for card
+      let resBadgeCard = '';
+      const gfNc = parseInt(m.goals_for);
+      const gaNc = parseInt(m.goals_against);
+      if (!isNaN(gfNc) && !isNaN(gaNc) && (m.played || (m.goals_for!=='' || m.goals_against!==''))){
+        let cls = 'draw';
+        if (gfNc > gaNc) cls = 'win'; else if (gfNc < gaNc) cls = 'loss';
+        resBadgeCard = `<span class="badge res ${cls}">${(m.goals_for??'')||''}–${(m.goals_against??'')||''}</span>`;
+      }
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center">
           <div>
@@ -408,7 +464,7 @@
             <div style="font-size:1.1rem; font-weight:700">${m.home_team||m.team||''} – ${m.away_team||m.opponent||''}</div>
             <div style="color:var(--muted)">${[m.venue,m.city].filter(Boolean).join(', ')}</div>
           </div>
-          <div>${(m.goals_for??'')!=='' || (m.goals_against??'')!=='' ? `<span class="badge">${m.goals_for||''}–${m.goals_against||''}</span>` : ''}</div>
+          <div>${resBadgeCard}</div>
         </div>
         <div class="actions" style="margin-top:.6rem">
           <button class="btn btn-outline editBtn" data-id="${m.id}">Ändra</button>
@@ -482,6 +538,23 @@
           body: JSON.stringify({ top_scorer_team: team, top_scorer_opponent: opp })
         });
         toast('Uppdaterade toppskyttar');
+        list();
+      });
+    });
+
+    // Bind result update
+    document.querySelectorAll('.scoreBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const gf = prompt('Mål – vårt lag', '');
+        if (gf === null) return; // cancelled
+        const ga = prompt('Mål – motstånd', '');
+        if (ga === null) return; // cancelled
+        const body = { played: true };
+        if (gf !== '' && !isNaN(parseInt(gf))) body.goals_for = parseInt(gf);
+        if (ga !== '' && !isNaN(parseInt(ga))) body.goals_against = parseInt(ga);
+        await fetch(`/api/matches/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        toast('Uppdaterade resultat');
         list();
       });
     });
@@ -561,16 +634,38 @@
       const res = await fetch('/api/auth/me');
       if (res.ok) {
         const me = await res.json();
-        document.getElementById('me').textContent = `Inloggad som ${me.email}`;
-        if (me.is_admin) { document.getElementById('adminBtn').style.display = 'inline-flex'; }
+        const menuMe = document.getElementById('menuMe');
+        if (menuMe) menuMe.textContent = `Inloggad som ${me.email}`;
+        const menuAdmin = document.getElementById('menuAdmin');
+        if (me.is_admin && menuAdmin) { menuAdmin.style.display = 'block'; }
       }
     } catch {}
   })();
 
-  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
-    await fetch('/api/auth/logout', { method:'POST' });
-    window.location = '/login';
-  });
+  // Menu interactions
+  (function(){
+    const btn = document.getElementById('menuBtn');
+    const panel = document.getElementById('menuPanel');
+    const logout = document.getElementById('menuLogout');
+    if (btn && panel){
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        btn.setAttribute('aria-expanded', String(!open));
+      });
+      document.addEventListener('click', (e)=>{
+        if (!panel.contains(e.target) && e.target !== btn){ panel.style.display = 'none'; btn.setAttribute('aria-expanded','false'); }
+      });
+      document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape'){ panel.style.display='none'; btn.setAttribute('aria-expanded','false'); } });
+    }
+    if (logout){
+      logout.addEventListener('click', async ()=>{
+        await fetch('/api/auth/logout', { method:'POST' });
+        window.location = '/login';
+      });
+    }
+  })();
 
   function toast(msg){
     const host = document.getElementById('toast');
