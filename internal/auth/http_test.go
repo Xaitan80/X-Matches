@@ -1,12 +1,13 @@
 package auth
 
 import (
-	"bytes"
-	"database/sql"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"path/filepath"
+    "bytes"
+    "context"
+    "database/sql"
+    "encoding/json"
+    "net/http"
+    "net/http/httptest"
+    "path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -436,6 +437,47 @@ func TestAdmin_DeleteUser_Flow(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("deleted user should not login, got %d", w.Code)
 	}
+}
+
+func TestRegister_BlockedByReservedEmail(t *testing.T) {
+    t.Setenv("COOKIE_SECURE", "false")
+    db := newTestDB(t)
+    r := newRouterWithAuth(t, db)
+    repo := NewRepository(db)
+    // reserve an email (no user)
+    if err := repo.ReserveEmail(context.Background(), "used@example.com", nil); err != nil {
+        t.Fatalf("reserve: %v", err)
+    }
+    // try to register with reserved email
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"used@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
+    if w.Code != http.StatusConflict {
+        t.Fatalf("expected 409 for reserved email, got %d", w.Code)
+    }
+}
+
+func TestChangeEmail_ReservesOldAndBlocksReuse(t *testing.T) {
+    t.Setenv("COOKIE_SECURE", "false")
+    db := newTestDB(t)
+    r := newRouterWithAuth(t, db)
+    // create user with old email
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"old@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
+    if w.Code != http.StatusCreated { t.Fatalf("register old failed: %d", w.Code) }
+    ck := loginAndGetCookie(t, r, "old@example.com", "supersecurepass")
+    // change to new email
+    w = doJSONWithCookie(r, http.MethodPost, "/api/auth/me/email", map[string]any{"new_email":"new@example.com", "password":"supersecurepass"}, ck)
+    if w.Code != http.StatusOK { t.Fatalf("change email failed: %d", w.Code) }
+    // now try to register a new user with old email (should be blocked)
+    w = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"old@example.com", "password":"anothersecurepass", "password_confirm":"anothersecurepass"})
+    if w.Code != http.StatusConflict {
+        t.Fatalf("expected 409 when reusing old email, got %d", w.Code)
+    }
+    // allow the same user to switch back to their old email
+    // login with new email
+    ck2 := loginAndGetCookie(t, r, "new@example.com", "supersecurepass")
+    w = doJSONWithCookie(r, http.MethodPost, "/api/auth/me/email", map[string]any{"new_email":"old@example.com", "password":"supersecurepass"}, ck2)
+    if w.Code != http.StatusOK {
+        t.Fatalf("expected 200 switching back to own reserved email, got %d", w.Code)
+    }
 }
 
 func TestAdmin_CannotDemoteSelfIfLastAdmin(t *testing.T) {

@@ -43,14 +43,18 @@ func (r *Repository) CreateUser(ctx context.Context, email, passwordHash string)
 		`INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?) RETURNING id, email, password_hash, created_at, COALESCE(is_admin,0)`,
 		email, passwordHash, isAdmin,
 	)
-	var res User
-	if err := row.Scan(&res.ID, &res.Email, &res.PasswordHash, &res.CreatedAt, &res.IsAdmin); err != nil {
-		return User{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return User{}, err
-	}
-	return res, nil
+    var res User
+    if err := row.Scan(&res.ID, &res.Email, &res.PasswordHash, &res.CreatedAt, &res.IsAdmin); err != nil {
+        return User{}, err
+    }
+    // Reserve this email so it cannot be used for new accounts by others later
+    if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO used_emails(email, reserved_by) VALUES(?, ?)`, res.Email, res.ID); err != nil {
+        return User{}, err
+    }
+    if err := tx.Commit(); err != nil {
+        return User{}, err
+    }
+    return res, nil
 }
 
 func (r *Repository) GetUserByEmail(ctx context.Context, email string) (User, error) {
