@@ -22,7 +22,16 @@ import (
 var webFS embed.FS
 
 func main() {
-	dsn := env("DB_PATH", "xmatches.db")
+    dsn := env("DB_PATH", "xmatches.db")
+    // Ensure SQLite enforces foreign keys on all connections
+    // modernc.org/sqlite supports DSN pragma via _pragma=foreign_keys(1)
+    if !strings.Contains(strings.ToLower(dsn), "_pragma=foreign_keys(1)") {
+        if strings.Contains(dsn, "?") {
+            dsn += "&_pragma=foreign_keys(1)"
+        } else {
+            dsn += "?_pragma=foreign_keys(1)"
+        }
+    }
 
     // Öppna DB (modernc driver name: "sqlite")
     sqlDB, err := sql.Open("sqlite", dsn)

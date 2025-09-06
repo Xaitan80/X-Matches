@@ -130,3 +130,16 @@ func (r *Repository) SetAdmin(ctx context.Context, userID int64, isAdmin bool) e
     _, err := r.db.ExecContext(ctx, `UPDATE users SET is_admin = ? WHERE id = ?`, val, userID)
     return err
 }
+
+func (r *Repository) DeleteUser(ctx context.Context, userID int64) error {
+    tx, err := r.db.BeginTx(ctx, nil)
+    if err != nil { return err }
+    defer func(){ _ = tx.Rollback() }()
+    if _, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, userID); err != nil {
+        return err
+    }
+    if _, err := tx.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, userID); err != nil {
+        return err
+    }
+    return tx.Commit()
+}
