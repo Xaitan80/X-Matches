@@ -1,0 +1,61 @@
+name: GoSec
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gosec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: "${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}"
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Generate GoSec reports (JSON/HTML)
+        id: gen
+        continue-on-error: true
+        run: |
+          G=$(go env GOPATH)/bin/gosec
+          $G -fmt=json -out gosec.json ./...
+          $G -fmt=html -out gosec.html ./...
+
+      - name: Upload GoSec reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosec-reports
+          path: |
+            gosec.json
+            gosec.html
+
+      - name: Run gosec (fail if issues)
+        run: $(go env GOPATH)/bin/gosec -quiet ./...
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "Issues: 0" >> "$GITHUB_STEP_SUMMARY"
