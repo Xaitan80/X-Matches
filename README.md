@@ -39,6 +39,7 @@ Migrationer uppdateras automatiskt vid start (nya tabeller: `users`, `sessions`)
 
 Admin kontrolleras via kolumnen `is_admin` i tabellen `users`. För enkel bootstrap i små installationer kan du sätta `ADMIN_EMAILS` med en eller flera e‑postadresser; dessa behandlas som admin även om `is_admin`=0.
 
+query för att sätta admin: sqlite3 xmatches.db "UPDATE users SET is_admin=1 WHERE email='EMAIL';"
 ## Köra lokalt
 
 - Krav: Go 1.23+ (CGO påslaget), SQLite C‑toolchain (macOS: Xcode CLT; Linux: build‑essential)

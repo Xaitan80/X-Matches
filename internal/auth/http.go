@@ -190,4 +190,14 @@ func RegisterAdminRoutes(r *gin.Engine, repo *Repository) {
             c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
         c.JSON(http.StatusOK, gin.H{"ok": true})
     })
+
+    admin.DELETE("/users/:id", func(c *gin.Context) {
+        idStr := c.Param("id")
+        var id int64
+        _, _ = fmt.Sscan(idStr, &id)
+        if id <= 0 { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid id"}); return }
+        if err := repo.DeleteUser(c.Request.Context(), id); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+        c.Status(http.StatusNoContent)
+    })
 }

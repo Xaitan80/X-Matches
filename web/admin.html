@@ -55,7 +55,14 @@ async function loadUsers(){
       document.getElementById('ad_'+u.id).textContent = u.is_admin?'Ja':'Nej';
       adm.textContent = u.is_admin?'Ta bort admin':'Gör admin';
     });
-    td.appendChild(btn); td.appendChild(adm); tr.appendChild(td); tb.appendChild(tr);
+    const del = document.createElement('button'); del.style.marginLeft='.4rem'; del.style.background='#ef4444'; del.textContent='Radera användare';
+    del.addEventListener('click', async ()=>{
+      if (!confirm(`Radera användare ${u.email}? Detta går inte att ångra.`)) return;
+      const r = await fetch(`/api/admin/users/${u.id}`, { method:'DELETE' });
+      if (!r.ok){ alert('Misslyckades.'); return; }
+      tr.remove();
+    });
+    td.appendChild(btn); td.appendChild(adm); td.appendChild(del); tr.appendChild(td); tb.appendChild(tr);
   });
 }
 loadUsers();

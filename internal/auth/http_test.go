@@ -323,3 +323,27 @@ func TestAdmin_SetAdminFlag_Flow(t *testing.T) {
     w = doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckUser)
     if w.Code != http.StatusOK { t.Fatalf("expected 200 after flag, got %d", w.Code) }
 }
+
+func TestAdmin_DeleteUser_Flow(t *testing.T) {
+    t.Setenv("COOKIE_SECURE", "false")
+    t.Setenv("ADMIN_EMAILS", "root@example.com")
+    db := newTestDB(t)
+    r := newRouterWithAuth(t, db)
+    // create target and admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"bye@example.com", "password":"strongpass123"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass"})
+    ckAdmin := loginAndGetCookie(t, r, "root@example.com", "supersecurepass")
+    // find target id
+    w := doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckAdmin)
+    var users []map[string]any
+    _ = json.Unmarshal(w.Body.Bytes(), &users)
+    var targetID int64
+    for _, u := range users { if u["email"].(string) == "bye@example.com" { targetID = int64(u["id"].(float64)) } }
+    if targetID == 0 { t.Fatalf("target not found") }
+    // delete
+    w = doJSONWithCookie(r, http.MethodDelete, "/api/admin/users/"+strconv.FormatInt(targetID,10), nil, ckAdmin)
+    if w.Code != http.StatusNoContent { t.Fatalf("delete expected 204, got %d", w.Code) }
+    // user cannot login anymore
+    w = doJSON(r, http.MethodPost, "/api/auth/login", map[string]any{"email":"bye@example.com", "password":"strongpass123"})
+    if w.Code != http.StatusUnauthorized { t.Fatalf("deleted user should not login, got %d", w.Code) }
+}
