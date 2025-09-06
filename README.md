@@ -11,7 +11,7 @@ En liten app för att lägga in matcher, se dem i en enkel vy och uppdatera resu
 Grundläggande, säker autentisering finns nu:
 
 - Endpoints:
-  - `POST /api/auth/register` — body `{ "email": "user@example.com", "password": "minst 12 tecken" }`
+  - `POST /api/auth/register` — body `{ "email": "user@example.com", "password": "minst 12 tecken", "password_confirm": "samma som password" }`
   - `POST /api/auth/login` — samma body, sätter en HTTP‑only session‑cookie vid lyckad inloggning
   - `POST /api/auth/logout` — loggar ut och rensar cookie
   - `GET /api/auth/me` — returnerar `{ id, email }` för inloggad användare

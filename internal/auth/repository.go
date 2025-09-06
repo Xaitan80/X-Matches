@@ -25,14 +25,27 @@ type User struct {
 
 // CreateUser inserts a new user. Returns conflict error if email exists.
 func (r *Repository) CreateUser(ctx context.Context, email, passwordHash string) (User, error) {
-    res := User{}
-    row := r.db.QueryRowContext(ctx,
-        `INSERT INTO users (email, password_hash) VALUES (?, ?) RETURNING id, email, password_hash, created_at, COALESCE(is_admin,0)` ,
-        email, passwordHash,
+    tx, err := r.db.BeginTx(ctx, nil)
+    if err != nil { return User{}, err }
+    defer func(){ _ = tx.Rollback() }()
+
+    var cnt int64
+    if err := tx.QueryRowContext(ctx, `SELECT COUNT(1) FROM users`).Scan(&cnt); err != nil {
+        return User{}, err
+    }
+    isAdmin := 0
+    if cnt == 0 { // first user becomes admin
+        isAdmin = 1
+    }
+    row := tx.QueryRowContext(ctx,
+        `INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?) RETURNING id, email, password_hash, created_at, COALESCE(is_admin,0)`,
+        email, passwordHash, isAdmin,
     )
+    var res User
     if err := row.Scan(&res.ID, &res.Email, &res.PasswordHash, &res.CreatedAt, &res.IsAdmin); err != nil {
         return User{}, err
     }
+    if err := tx.Commit(); err != nil { return User{}, err }
     return res, nil
 }
 

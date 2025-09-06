@@ -37,8 +37,9 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 
     api.POST("/register", func(c *gin.Context) {
         var req struct{
-            Email    string `json:"email"`
-            Password string `json:"password"`
+            Email            string `json:"email"`
+            Password         string `json:"password"`
+            PasswordConfirm  string `json:"password_confirm"`
         }
         if err := c.BindJSON(&req); err != nil {
             c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json"}); return
@@ -46,6 +47,7 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
         req.Email = strings.TrimSpace(strings.ToLower(req.Email))
         if req.Email == "" || !strings.Contains(req.Email, "@") { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid email"}); return }
         if len(req.Password) < 12 { c.JSON(http.StatusBadRequest, gin.H{"error":"password too short (min 12)"}); return }
+        if req.Password != req.PasswordConfirm { c.JSON(http.StatusBadRequest, gin.H{"error":"passwords do not match"}); return }
 
         // Hash password with bcrypt default cost
         hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

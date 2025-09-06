@@ -95,10 +95,10 @@ func TestRegister_InvalidEmail(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
     // empty email
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"", "password":"123456789012"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"", "password":"123456789012", "password_confirm":"123456789012"})
     if w.Code != http.StatusBadRequest { t.Fatalf("expected 400, got %d", w.Code) }
     // missing @
-    w = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"userexample.com", "password":"123456789012"})
+    w = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"userexample.com", "password":"123456789012", "password_confirm":"123456789012"})
     if w.Code != http.StatusBadRequest { t.Fatalf("expected 400, got %d", w.Code) }
 }
 
@@ -106,7 +106,7 @@ func TestRegister_ShortPassword(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
     // 11 chars => reject
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user@example.com", "password":"12345678901"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user@example.com", "password":"12345678901", "password_confirm":"12345678901"})
     if w.Code != http.StatusBadRequest {
         t.Fatalf("expected 400 for short password, got %d", w.Code)
     }
@@ -115,8 +115,10 @@ func TestRegister_ShortPassword(t *testing.T) {
 func TestRegister_NormalizeAndSuccess(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy to consume first-admin logic so assertions aren't affected
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123", "password_confirm":"firstpassword123"})
     // Lowercasing + trimming
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"  USER@Example.COM  ", "password":"123456789012"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"  USER@Example.COM  ", "password":"123456789012", "password_confirm":"123456789012"})
     if w.Code != http.StatusCreated {
         t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
     }
@@ -130,7 +132,7 @@ func TestRegister_NormalizeAndSuccess(t *testing.T) {
 func TestRegister_DuplicateEmail(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
-    body := map[string]any{"email":"dupe@example.com", "password":"123456789012"}
+    body := map[string]any{"email":"dupe@example.com", "password":"123456789012", "password_confirm":"123456789012"}
     w := doJSON(r, http.MethodPost, "/api/auth/register", body)
     if w.Code != http.StatusCreated { t.Fatalf("first create expected 201, got %d", w.Code) }
     w = doJSON(r, http.MethodPost, "/api/auth/register", body)
@@ -144,7 +146,7 @@ func TestLogin_SetsCookie(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
     // create user
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"login@example.com", "password":"123456789012"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"login@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     if w.Code != http.StatusCreated { t.Fatalf("register failed: %d", w.Code) }
     // login
     w = doJSON(r, http.MethodPost, "/api/auth/login", map[string]any{"email":"login@example.com", "password":"123456789012"})
@@ -159,7 +161,7 @@ func TestLogout_ClearsSession(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
     // register
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"logout@example.com", "password":"123456789012"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"logout@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     if w.Code != http.StatusCreated { t.Fatalf("register failed: %d", w.Code) }
     // login
     w = doJSON(r, http.MethodPost, "/api/auth/login", map[string]any{"email":"logout@example.com", "password":"123456789012"})
@@ -184,7 +186,7 @@ func TestSession_Expiry(t *testing.T) {
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
     // register
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"exp@example.com", "password":"123456789012"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"exp@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     if w.Code != http.StatusCreated { t.Fatalf("register failed: %d", w.Code) }
     // login
     w = doJSON(r, http.MethodPost, "/api/auth/login", map[string]any{"email":"exp@example.com", "password":"123456789012"})
@@ -216,7 +218,7 @@ func TestAuthRequired_Middleware(t *testing.T) {
     if w.Code != http.StatusUnauthorized { t.Fatalf("expected 401, got %d", w.Code) }
     // register+login
     rr := newRouterWithAuth(t, db)
-    _ = doJSON(rr, http.MethodPost, "/api/auth/register", map[string]any{"email":"mw@example.com", "password":"123456789012"})
+    _ = doJSON(rr, http.MethodPost, "/api/auth/register", map[string]any{"email":"mw@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     lw := doJSON(rr, http.MethodPost, "/api/auth/login", map[string]any{"email":"mw@example.com", "password":"123456789012"})
     ck := cookieFrom(lw)
     // with cookie -> 200
@@ -242,8 +244,10 @@ func TestAdmin_ListUsers_Gating(t *testing.T) {
     t.Setenv("COOKIE_SECURE", "false")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // create a dummy first user so they receive admin automatically
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     // create a normal user and login
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user1@example.com", "password":"123456789012"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user1@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     ckUser := loginAndGetCookie(t, r, "user1@example.com", "123456789012")
     // normal user should get 403
     w := doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckUser)
@@ -251,7 +255,7 @@ func TestAdmin_ListUsers_Gating(t *testing.T) {
 
     // make admin via env list
     t.Setenv("ADMIN_EMAILS", "admin@example.com")
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"admin@example.com", "password":"123456789012"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"admin@example.com", "password":"123456789012", "password_confirm":"123456789012"})
     ckAdmin := loginAndGetCookie(t, r, "admin@example.com", "123456789012")
     w = doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckAdmin)
     if w.Code != http.StatusOK { t.Fatalf("expected 200 for admin, got %d", w.Code) }
@@ -262,11 +266,13 @@ func TestAdmin_ResetPassword_Flow(t *testing.T) {
     t.Setenv("ADMIN_EMAILS", "root@example.com")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy first user gets auto-admin so target won't
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123", "password_confirm":"firstpassword123"})
     // create target user
-    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"target@example.com", "password":"oldpassword123"})
+    w := doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"target@example.com", "password":"oldpassword123", "password_confirm":"oldpassword123"})
     if w.Code != http.StatusCreated { t.Fatalf("register target failed: %d", w.Code) }
     // create admin and login
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
     ckAdmin := loginAndGetCookie(t, r, "root@example.com", "supersecurepass")
     // find target id via admin list
     w = doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckAdmin)
@@ -297,9 +303,11 @@ func TestAdmin_SetAdminFlag_Flow(t *testing.T) {
     t.Setenv("ADMIN_EMAILS", "root@example.com")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy first user gets auto-admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123", "password_confirm":"firstpassword123"})
     // create normal user and admin
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user2@example.com", "password":"strongpass123"})
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user2@example.com", "password":"strongpass123", "password_confirm":"strongpass123"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
     ckAdmin := loginAndGetCookie(t, r, "root@example.com", "supersecurepass")
 
     // normal user cannot access admin
@@ -329,9 +337,11 @@ func TestAdmin_DeleteUser_Flow(t *testing.T) {
     t.Setenv("ADMIN_EMAILS", "root@example.com")
     db := newTestDB(t)
     r := newRouterWithAuth(t, db)
+    // dummy first user gets auto-admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"first@example.com", "password":"firstpassword123", "password_confirm":"firstpassword123"})
     // create target and admin
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"bye@example.com", "password":"strongpass123"})
-    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"bye@example.com", "password":"strongpass123", "password_confirm":"strongpass123"})
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
     ckAdmin := loginAndGetCookie(t, r, "root@example.com", "supersecurepass")
     // find target id
     w := doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckAdmin)

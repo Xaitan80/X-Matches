@@ -7,6 +7,8 @@ import (
     "net/http"
     "os"
     "strings"
+    "path"
+    "path/filepath"
 
     _ "time/tzdata"
 
@@ -18,7 +20,7 @@ import (
     "github.com/xaitan80/X-Matches/internal/auth"
 )
 
-//go:embed web/*
+//go:embed web/* internal/media/*
 var webFS embed.FS
 
 func main() {
@@ -87,6 +89,13 @@ func main() {
         c.Data(http.StatusOK, "text/html; charset=utf-8", f)
     })
 
+    // Public register page
+    r.GET("/register", func(c *gin.Context) {
+        f, err := webFS.ReadFile("web/register.html")
+        if err != nil { c.String(http.StatusInternalServerError, "missing register"); return }
+        c.Data(http.StatusOK, "text/html; charset=utf-8", f)
+    })
+
     // Protected app page
     r.GET("/app", auth.AuthRequired(authRepo), func(c *gin.Context) {
         f, err := webFS.ReadFile("web/app.html")
@@ -99,6 +108,24 @@ func main() {
         f, err := webFS.ReadFile("web/admin.html")
         if err != nil { c.String(http.StatusInternalServerError, "missing admin"); return }
         c.Data(http.StatusOK, "text/html; charset=utf-8", f)
+    })
+
+    // Serve embedded media (images) from internal/media
+    r.GET("/media/*file", func(c *gin.Context) {
+        p := path.Clean(strings.TrimPrefix(c.Param("file"), "/"))
+        if p == "." || strings.Contains(p, "..") || p == "" { c.Status(http.StatusNotFound); return }
+        full := filepath.ToSlash(path.Join("internal/media", p))
+        b, err := webFS.ReadFile(full)
+        if err != nil { c.Status(http.StatusNotFound); return }
+        // basic content-type by extension
+        ct := "application/octet-stream"
+        switch strings.ToLower(filepath.Ext(full)) {
+        case ".jpg", ".jpeg": ct = "image/jpeg"
+        case ".png": ct = "image/png"
+        case ".gif": ct = "image/gif"
+        case ".webp": ct = "image/webp"
+        }
+        c.Data(http.StatusOK, ct, b)
     })
 
 	addr := env("ADDR", ":8080")
