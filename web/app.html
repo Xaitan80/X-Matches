@@ -194,6 +194,11 @@
     background:var(--card-bg); color:var(--ink); border:1px solid var(--border);
     border-radius:14px; box-shadow:var(--shadow); padding:.5rem; min-width:220px;
   }
+  .menu-form{ display:none; padding:.4rem .4rem .6rem }
+  .menu-form label{ display:block; margin:.35rem 0 .2rem; font-size:.9rem; color:var(--muted) }
+  .menu-form input{ width:100%; padding:.5rem .6rem; border:1px solid var(--border); border-radius:10px; background:var(--input-bg); color:var(--ink) }
+  .menu-actions{ display:flex; gap:.4rem; margin-top:.6rem }
+  .menu-actions .btn{ padding:.45rem .8rem; border-radius:10px }
   .menu-item{ display:block; width:100%; text-align:left; padding:.5rem .6rem; border:0; background:transparent; color:var(--ink); border-radius:10px; cursor:pointer; text-decoration:none }
   .menu-item:hover{ background:rgba(0,0,0,.04) }
   [data-theme="dark"] .menu-item:hover{ background:rgba(255,255,255,.06) }
@@ -208,10 +213,32 @@
   <div class="card frosted">
     <button id="menuBtn" class="menu-btn" aria-haspopup="true" aria-expanded="false" title="Meny">⋯</button>
     <div id="menuPanel" class="menu-panel" style="display:none">
-      <div id="menuMe" class="menu-me"></div>
+  <div id="menuMe" class="menu-me"></div>
   <a id="menuAdmin" href="/admin" class="menu-item" style="display:none">Admin</a>
   <button id="menuChangeEmail" class="menu-item">Byt e‑post</button>
+  <div id="formEmail" class="menu-form">
+    <label for="newEmail">Ny e‑post</label>
+    <input id="newEmail" type="email" autocomplete="email" />
+    <label for="emailPw">Lösenord</label>
+    <input id="emailPw" type="password" autocomplete="current-password" />
+    <div class="menu-actions">
+      <button id="emailSave" class="btn btn-primary" type="button">Spara</button>
+      <button id="emailCancel" class="btn btn-outline" type="button">Avbryt</button>
+    </div>
+  </div>
   <button id="menuChangePw" class="menu-item">Byt lösenord</button>
+  <div id="formPw" class="menu-form">
+    <label for="currPw">Nuvarande lösenord</label>
+    <input id="currPw" type="password" autocomplete="current-password" />
+    <label for="newPw">Nytt lösenord</label>
+    <input id="newPw" type="password" autocomplete="new-password" />
+    <label for="newPw2">Upprepa nytt lösenord</label>
+    <input id="newPw2" type="password" autocomplete="new-password" />
+    <div class="menu-actions">
+      <button id="pwSave" class="btn btn-primary" type="button">Spara</button>
+      <button id="pwCancel" class="btn btn-outline" type="button">Avbryt</button>
+    </div>
+  </div>
   <button id="menuLogout" class="menu-item">Logga ut</button>
 </div>
     <div class="toolbar">
@@ -651,6 +678,12 @@
     const logout = document.getElementById('menuLogout');
     const changeEmail = document.getElementById('menuChangeEmail');
     const changePw = document.getElementById('menuChangePw');
+    const formEmail = document.getElementById('formEmail');
+    const formPw = document.getElementById('formPw');
+    const emailSave = document.getElementById('emailSave');
+    const emailCancel = document.getElementById('emailCancel');
+    const pwSave = document.getElementById('pwSave');
+    const pwCancel = document.getElementById('pwCancel');
     if (btn && panel){
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -671,25 +704,43 @@
     }
 
     if (changeEmail){
-      changeEmail.addEventListener('click', async ()=>{
-        const email = prompt('Ny e‑post:'); if (!email) return;
-        const pw = prompt('Bekräfta med ditt lösenord:'); if (pw===null) return;
+      changeEmail.addEventListener('click', ()=>{
+        formPw.style.display = 'none';
+        formEmail.style.display = 'block';
+        document.getElementById('newEmail').focus();
+      });
+    }
+    if (emailCancel){ emailCancel.addEventListener('click', ()=>{ formEmail.style.display='none'; }); }
+    if (emailSave){
+      emailSave.addEventListener('click', async ()=>{
+        const email = (document.getElementById('newEmail').value||'').trim();
+        const pw = document.getElementById('emailPw').value;
+        if (!email || !pw){ alert('Fyll i alla fält.'); return; }
         const res = await fetch('/api/auth/me/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ new_email: email, password: pw }) });
         if (!res.ok){ const t = await res.json().catch(()=>({error:'Uppdatering misslyckades'})); alert(t.error||'Uppdatering misslyckades'); return; }
-        alert('E‑post uppdaterad. Logga gärna in igen om det behövs.');
-        panel.style.display='none';
+        alert('E‑post uppdaterad.'); formEmail.style.display='none'; panel.style.display='none';
       });
     }
 
     if (changePw){
-      changePw.addEventListener('click', async ()=>{
-        const curr = prompt('Nuvarande lösenord:'); if (curr===null) return;
-        const npw = prompt('Nytt lösenord (minst 12 tecken):'); if (npw===null) return; if (npw.length<12){ alert('För kort.'); return; }
-        const npw2 = prompt('Upprepa nytt lösenord:'); if (npw2===null) return; if (npw!==npw2){ alert('Lösenorden matchar inte.'); return; }
+      changePw.addEventListener('click', ()=>{
+        formEmail.style.display = 'none';
+        formPw.style.display = 'block';
+        document.getElementById('currPw').focus();
+      });
+    }
+    if (pwCancel){ pwCancel.addEventListener('click', ()=>{ formPw.style.display='none'; }); }
+    if (pwSave){
+      pwSave.addEventListener('click', async ()=>{
+        const curr = document.getElementById('currPw').value;
+        const npw = document.getElementById('newPw').value;
+        const npw2 = document.getElementById('newPw2').value;
+        if (!curr || !npw || !npw2){ alert('Fyll i alla fält.'); return; }
+        if (npw.length < 12){ alert('Lösenordet måste vara minst 12 tecken.'); return; }
+        if (npw !== npw2){ alert('Lösenorden matchar inte.'); return; }
         const res = await fetch('/api/auth/me/password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ current_password: curr, new_password: npw, new_password_confirm: npw2 }) });
         if (!res.ok){ const t = await res.json().catch(()=>({error:'Uppdatering misslyckades'})); alert(t.error||'Uppdatering misslyckades'); return; }
-        alert('Lösenord uppdaterat.');
-        panel.style.display='none';
+        alert('Lösenord uppdaterat.'); formPw.style.display='none'; panel.style.display='none';
       });
     }
   })();

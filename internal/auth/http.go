@@ -68,6 +68,15 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 			return
 		}
 
+		// Prevent registering with previously used email by others
+		if res, by, err := repo.IsEmailReserved(c.Request.Context(), req.Email); err == nil && res {
+			if by == nil { c.JSON(http.StatusConflict, gin.H{"error":"email not available"}); return }
+			// reserved by someone (not this new user); block
+			c.JSON(http.StatusConflict, gin.H{"error":"email not available"}); return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"email check failed"}); return
+		}
+
 		// Create user
 		u, err := repo.CreateUser(c.Request.Context(), req.Email, string(hash))
 		if err != nil {
@@ -158,7 +167,7 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})
 
-	// Change own email (requires password)
+	// Change own email (requires password). Previous email becomes reserved so others cannot register it.
 	api.POST("/me/email", func(c *gin.Context) {
 		u, ok := CurrentUser(c, repo)
 		if !ok { c.JSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
@@ -171,9 +180,19 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 		if email == "" || !strings.Contains(email, "@") { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid email"}); return }
 		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)); err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error":"invalid password"}); return }
+		// deny if email reserved by another user
+		if res, by, err := repo.IsEmailReserved(c.Request.Context(), email); err == nil && res {
+			if by == nil || *by != u.ID { c.JSON(http.StatusConflict, gin.H{"error":"email not available"}); return }
+		} else if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error":"email check failed"}); return }
+		// deny if another user currently uses it
+		if other, err := repo.GetUserByEmail(c.Request.Context(), email); err == nil && other.ID != u.ID {
+			c.JSON(http.StatusConflict, gin.H{"error":"email already in use"}); return
+		}
 		if err := repo.UpdateEmail(c.Request.Context(), u.ID, email); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "unique") { c.JSON(http.StatusConflict, gin.H{"error":"email already in use"}); return }
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+		// reserve previous email for this user
+		_ = repo.ReserveEmail(c.Request.Context(), u.Email, &u.ID)
 		c.JSON(http.StatusOK, gin.H{"ok": true, "email": email})
 	})
 }
