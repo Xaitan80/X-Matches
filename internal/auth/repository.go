@@ -10,7 +10,7 @@ import (
 )
 
 type Repository struct {
-	db *sql.DB
+    db *sql.DB
 }
 
 func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
@@ -190,5 +190,30 @@ func (r *Repository) CountOtherAdmins(ctx context.Context, excludeID int64) (int
 
 func (r *Repository) UpdateEmail(ctx context.Context, userID int64, email string) error {
     _, err := r.db.ExecContext(ctx, `UPDATE users SET email = ? WHERE id = ?`, email, userID)
+    return err
+}
+
+// Email reservation helpers
+func (r *Repository) IsEmailReserved(ctx context.Context, email string) (bool, *int64, error) {
+    var reservedBy sql.NullInt64
+    err := r.db.QueryRowContext(ctx, `SELECT reserved_by FROM used_emails WHERE email = ?`, email).Scan(&reservedBy)
+    if err == sql.ErrNoRows {
+        return false, nil, nil
+    }
+    if err != nil { return false, nil, err }
+    if reservedBy.Valid {
+        v := reservedBy.Int64
+        return true, &v, nil
+    }
+    return true, nil, nil
+}
+
+func (r *Repository) ReserveEmail(ctx context.Context, email string, userID *int64) error {
+    // Upsert-like: insert if not exists
+    if userID != nil {
+        _, err := r.db.ExecContext(ctx, `INSERT OR IGNORE INTO used_emails(email, reserved_by) VALUES(?, ?)`, email, *userID)
+        return err
+    }
+    _, err := r.db.ExecContext(ctx, `INSERT OR IGNORE INTO used_emails(email, reserved_by) VALUES(?, NULL)`, email)
     return err
 }
