@@ -52,7 +52,9 @@
     const email = prompt('E‑post:'); if (!email) return;
     const pw = prompt('Lösenord (minst 12 tecken):'); if (!pw) return;
     if (pw.length < 12){ showErr('Lösenordet måste vara minst 12 tecken.'); return; }
-    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pw }) });
+    const pw2 = prompt('Upprepa lösenord:'); if (!pw2) return;
+    if (pw !== pw2){ showErr('Lösenorden matchar inte.'); return; }
+    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pw, password_confirm: pw2 }) });
     if (!res.ok){ const t = await res.json().catch(()=>({error:'Registrering misslyckades'})); showErr(t.error||'Registrering misslyckades'); return; }
     alert('Konto skapat! Logga nu in.');
   });
