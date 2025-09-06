@@ -99,8 +99,6 @@ func (r *Repository) Create(ctx context.Context, m Match) (dbpkg.Match, error) {
         Venue:        pstr(m.Venue),
         Court:        pstr(m.Court),
         City:         pstr(m.City),
-        GatherTime:   pstr(m.GatherTime),
-        GatherPlace:  pstr(m.GatherPlace),
         MatchNumber:  pstr(m.MatchNumber),
         Referees:     pstr(m.Referees),
         Notes:        pstr(m.Notes),
@@ -134,8 +132,6 @@ func (r *Repository) Update(ctx context.Context, id int64, m Match) (dbpkg.Match
 	out.Venue = pstrKeep(m.Venue, cur.Venue)
 	out.Court = pstrKeep(m.Court, cur.Court)
 	out.City = pstrKeep(m.City, cur.City)
-	out.GatherTime = pstrKeep(m.GatherTime, cur.GatherTime)
-	out.GatherPlace = pstrKeep(m.GatherPlace, cur.GatherPlace)
 	out.MatchNumber = pstrKeep(m.MatchNumber, cur.MatchNumber)
 	out.Referees = pstrKeep(m.Referees, cur.Referees)
 	out.Notes = pstrKeep(m.Notes, cur.Notes)
@@ -197,5 +193,9 @@ func (r *Repository) Update(ctx context.Context, id int64, m Match) (dbpkg.Match
 }
 
 func (r *Repository) Delete(ctx context.Context, id int64) error {
-	return r.q.DeleteMatch(ctx, id)
+    return r.q.DeleteMatch(ctx, id)
+}
+
+func (r *Repository) DeleteAll(ctx context.Context) (int64, error) {
+    return r.q.DeleteAllMatches(ctx)
 }

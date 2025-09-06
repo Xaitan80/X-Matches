@@ -60,7 +60,35 @@
   .container{ max-width:1100px; margin: clamp(1rem, 2vw, 2rem) auto; padding: 0 1rem; }
   .card{ background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow); padding:1.25rem; margin-bottom:1rem; transition: background .25s ease, box-shadow .25s ease; }
 
-  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.5rem; }
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.75rem; flex-wrap:wrap; }
+  .filters{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; width:100%; }
+  .filters input#q{ flex:1 1 260px; }
+  @media (max-width: 760px){
+    .filters{ flex-direction: column; align-items: stretch; }
+    .seg{ align-self:flex-start; }
+  }
+  .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border:1px solid var(--border); border-radius:999px; background:var(--table-bg); }
+  .chip{ white-space: nowrap; }
+  .filters .chip + .chip{ margin-left:.6rem; }
+  .filter-which{ display:flex; flex-direction:column; gap:.3rem; }
+  .filter-which .chip + .chip{ margin-left:0; }
+  /* Make radio chips compact with a soft gradient */
+  .filter-which .chip{
+    padding:.2rem .5rem; border-radius:8px;
+    background: linear-gradient(135deg, var(--sky-200), var(--sky-50));
+    border-color: var(--border);
+  }
+  [data-theme="dark"] .filter-which .chip{
+    background: linear-gradient(135deg, #0e1729, #0b1220);
+  }
+  .filter-which .chip.active{
+    background: linear-gradient(135deg, var(--primary), var(--primary-700));
+    color:#fff; border-color: transparent;
+  }
+  .filter-which input[type="radio"]{ margin-right:.35rem; }
+  .seg{ display:inline-flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; background: var(--table-bg); }
+  .seg button{ background:transparent; padding:.4rem .7rem; border:0; color: var(--ink); }
+  .seg button.active{ background: var(--primary); color:#fff; font-weight:600; }
   h1{ margin:0; letter-spacing:.2px; }
   .sub{ color:var(--muted); margin:.25rem 0 0; }
 
@@ -77,6 +105,11 @@
     border-color:var(--primary);
     box-shadow:0 0 0 4px var(--primary-ring);
   }
+  /* Do not apply text-input styles to radios/checkboxes */
+  input[type="radio"], input[type="checkbox"]{
+    width:auto; padding:0; border:0; border-radius:4px; box-shadow:none; background:transparent;
+  }
+  input[type="radio"]:focus-visible, input[type="checkbox"]:focus-visible{ box-shadow:none; outline: none; }
 
   /* Buttons */
   .btn{
@@ -122,6 +155,10 @@
     background:#eef; color:#1e40af;
   }
   .played{ background:var(--success-bg); color:var(--success-fg); }
+  /* Toast */
+  #toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:20px; z-index:9999; }
+  .toast{ background:var(--card-bg); color:var(--ink); border:1px solid var(--border); padding:.6rem .9rem; border-radius:10px; box-shadow:var(--shadow); opacity:0; transition: opacity .2s, transform .2s; transform: translateY(6px); }
+  .toast.show{ opacity:1; transform: translateY(0); }
 
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{ transition:none !important; animation:none !important; }
@@ -137,9 +174,22 @@
       </div>
 
       <!-- Verktyg -->
-      <div class="actions">
+      <div class="filters">
+        <input id="q" placeholder="Sök (lag, motstånd, plats)" style="min-width:240px" />
+        <div class="seg" role="tablist" aria-label="Vy">
+          <button id="view_table" class="active" aria-selected="true">Tabell</button>
+          <button id="view_cards" aria-selected="false">Kort</button>
+        </div>
         <a class="btn btn-outline" href="/api/matches.csv" download>Exportera CSV</a>
+        <a class="btn btn-outline" href="/api/matches.ics" download>Exportera iCal</a>
+        <input id="importFile" type="file" accept=".csv,.xlsx" style="display:none" />
+        <button id="importBtn" class="btn btn-outline">Importera</button>
+        <button id="deleteAllBtn" class="btn btn-danger">Radera alla</button>
         <button id="themeToggle" class="btn btn-outline" aria-pressed="false" title="Byt tema">🌞 Ljust</button>
+        <div class="filter-which" role="group" aria-label="Visa">
+          <label class="chip"><input type="radio" name="flt_which" id="flt_played_radio" value="played"/> Spelade</label>
+          <label class="chip"><input type="radio" name="flt_which" id="flt_upcoming_radio" value="upcoming"/> Kommande</label>
+        </div>
       </div>
     </div>
 
@@ -192,16 +242,7 @@
         </div>
       </div>
 
-      <div class="row-2">
-        <div>
-          <label for="gather_time">Samlingstid (valfritt)</label>
-          <input id="gather_time" type="text" placeholder="t.ex. 13:45 i hallen" />
-        </div>
-        <div>
-          <label for="gather_place">Samling plats (valfritt)</label>
-          <input id="gather_place" type="text" />
-        </div>
-      </div>
+      
 
       <div class="row-2">
         <div>
@@ -223,7 +264,7 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="card" id="tableWrap">
     <table id="tbl">
       <thead>
         <tr>
@@ -234,6 +275,10 @@
       <tbody></tbody>
     </table>
   </div>
+  <div class="card" id="cardsWrap" style="display:none">
+    <div id="cards"></div>
+  </div>
+  <div id="toast"></div>
 </div>
 
 <script>
@@ -265,12 +310,57 @@
   });
 
   // --- App-logik ---
+  const STATE_KEY='xmatches_ui_state_v1';
+  function loadState(){
+    try{ return JSON.parse(localStorage.getItem(STATE_KEY)||'{}') }catch{ return {} }
+  }
+  function saveState(s){ localStorage.setItem(STATE_KEY, JSON.stringify(s)) }
+
   async function list() {
     const res = await fetch('/api/matches');
     const data = await res.json();
+    // migrate old state (upcoming/played) to new 'which' radio
+    const prev = loadState();
+    if (!prev.which) {
+      if (prev && prev.played && !prev.upcoming) prev.which = 'played'; else prev.which = 'upcoming';
+      saveState(prev);
+    }
+    const state = Object.assign({ q:'', which:'upcoming', view:'table' }, loadState());
+    document.getElementById('q').value = state.q;
+    const up = document.getElementById('flt_upcoming_radio');
+    const pl = document.getElementById('flt_played_radio');
+    up.checked = state.which === 'upcoming';
+    pl.checked = state.which === 'played';
+    // visual active state for chips
+    up.closest('label').classList.toggle('active', up.checked);
+    pl.closest('label').classList.toggle('active', pl.checked);
+    document.getElementById('view_table').classList.toggle('active', state.view==='table');
+    document.getElementById('view_cards').classList.toggle('active', state.view==='cards');
+
+    // Filter
+    const now = new Date();
+    const norm = s=> (s||'').toLowerCase();
+    const filtered = data.filter(m => {
+      const text = [m.team,m.opponent,m.home_team,m.away_team,m.venue,m.city,m.notes].map(norm).join(' ');
+      if (state.q && !text.includes(state.q.toLowerCase())) return false;
+      const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
+      const isUpcoming = d ? d >= new Date(now.toDateString()) : true;
+      if (state.which === 'upcoming' && !isUpcoming) return false;
+      if (state.which === 'played' && !m.played) return false;
+      return true;
+    });
+
+    // Sort by date asc
+    filtered.sort((a,b)=>{
+      const da = a.start_iso ? new Date(a.start_iso) : (a.date_raw ? new Date(a.date_raw) : new Date(0));
+      const db = b.start_iso ? new Date(b.start_iso) : (b.date_raw ? new Date(b.date_raw) : new Date(0));
+      return da-db || a.id-b.id;
+    });
+
+    // Render table
     const tb = document.querySelector('#tbl tbody');
     tb.innerHTML = '';
-    data.forEach(m => {
+    filtered.forEach(m => {
       const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
       const dateStr = d ? d.toLocaleDateString('sv-SE') : (m.date_raw||'');
       const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
@@ -287,12 +377,46 @@
         <td>
           <div class="actions">
             <button data-id="${m.id}" class="btn btn-outline playBtn">${m.played?'Markera ej spelad':'Markera spelad'}</button>
-            <button data-id="${m.id}" data-tst="${m.top_scorer_team||''}" data-tso="${m.top_scorer_opponent||''}" class="btn btn-outline editScorerBtn">Redigera skyttar</button>
+            <button data-id="${m.id}" class="btn btn-outline scoreBtn" title="Redigera resultat">Redigera resultat</button>
+            <button data-id="${m.id}" data-tst="${m.top_scorer_team||''}" data-tso="${m.top_scorer_opponent||''}" class="btn btn-outline editScorerBtn" title="Redigera skyttar">Redigera skyttar</button>
             <button data-id="${m.id}" class="btn btn-danger delBtn">Radera</button>
           </div>
         </td>
       `;
       tb.appendChild(tr);
+    });
+
+    // Render cards view with date grouping
+    const cards = document.getElementById('cards');
+    cards.innerHTML = '';
+    let lastDate = '';
+    filtered.forEach(m => {
+      const d = m.start_iso ? new Date(m.start_iso) : (m.date_raw ? new Date(m.date_raw) : null);
+      const dateStr = d ? d.toLocaleDateString('sv-SE',{weekday:'long', year:'numeric', month:'short', day:'numeric'}) : (m.date_raw||'');
+      if (dateStr && dateStr !== lastDate){
+        const h = document.createElement('h3');
+        h.textContent = dateStr;
+        h.style.margin = '0 0 .5rem';
+        cards.appendChild(h);
+        lastDate = dateStr;
+      }
+      const timeStr = d ? d.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}) : (m.time_raw||'');
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700; font-size:1.05rem">${m.team||m.home_team||''} ${m.opponent||m.away_team? '– '+(m.opponent||m.away_team):''}</div>
+            <div style="color:var(--muted)">${timeStr} • ${[m.venue,m.city].filter(Boolean).join(', ')}</div>
+          </div>
+          <div class="actions">
+            <button data-id="${m.id}" class="btn btn-outline playBtn" title="Markera spelad/ej spelad">${m.played?'Ej spelad':'Markera spelad'}</button>
+            <button data-id="${m.id}" class="btn btn-outline scoreBtn" title="Redigera resultat">Resultat</button>
+          </div>
+        </div>
+        <div style="margin-top:.4rem; color:var(--muted)">Toppskyttar: ${[m.top_scorer_team, m.top_scorer_opponent].filter(Boolean).join(' / ')||'—'}</div>
+      `;
+      cards.appendChild(card);
     });
 
     document.querySelectorAll('.playBtn').forEach(btn => {
@@ -305,6 +429,7 @@
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ played })
         });
+        toast('Uppdaterade spelad');
         list();
       });
     });
@@ -314,6 +439,7 @@
         const id = btn.getAttribute('data-id');
         if (!confirm('Radera match?')) return;
         await fetch(`/api/matches/${id}`, { method:'DELETE' });
+        toast('Raderade match');
         list();
       });
     });
@@ -332,6 +458,21 @@
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ top_scorer_team: team, top_scorer_opponent: opp })
         });
+        toast('Uppdaterade toppskyttar');
+        list();
+      });
+    });
+
+    document.querySelectorAll('.scoreBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const gf = prompt('Mål – vårt lag', ''); if (gf===null) return;
+        const ga = prompt('Mål – motstånd', ''); if (ga===null) return;
+        const body = { played:true };
+        if (gf!=='' && !isNaN(parseInt(gf))) body.goals_for = parseInt(gf);
+        if (ga!=='' && !isNaN(parseInt(ga))) body.goals_against = parseInt(ga);
+        await fetch(`/api/matches/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        toast('Uppdaterade resultat');
         list();
       });
     });
@@ -339,31 +480,83 @@
 
   document.querySelector('#createForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const body = {
-      date_raw: document.querySelector('#date').value,
-      time_raw: document.querySelector('#time').value,
-      end_time_raw: document.querySelector('#end_time').value,
-      team: document.querySelector('#team').value,
-      opponent: document.querySelector('#opponent').value,
-      venue: document.querySelector('#venue').value,
-      city: document.querySelector('#city').value,
-      league: document.querySelector('#league').value,
-      court: document.querySelector('#court').value,
-      gather_time: document.querySelector('#gather_time').value,
-      gather_place: document.querySelector('#gather_place').value,
-      notes: document.querySelector('#notes').value,
-      top_scorer_team: document.querySelector('#top_scorer_team').value,
-      top_scorer_opponent: document.querySelector('#top_scorer_opponent').value
-    };
+      const body = {
+        date_raw: document.querySelector('#date').value,
+        time_raw: document.querySelector('#time').value,
+        end_time_raw: document.querySelector('#end_time').value,
+        team: document.querySelector('#team').value,
+        opponent: document.querySelector('#opponent').value,
+        venue: document.querySelector('#venue').value,
+        city: document.querySelector('#city').value,
+        league: document.querySelector('#league').value,
+        court: document.querySelector('#court').value,
+        notes: document.querySelector('#notes').value,
+        top_scorer_team: document.querySelector('#top_scorer_team').value,
+        top_scorer_opponent: document.querySelector('#top_scorer_opponent').value
+      };
     await fetch('/api/matches', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
+    toast('Skapade match');
     e.target.reset();
     list();
   });
 
+  // UI wiring for filters & view
+  function bindUI(){
+    const state = Object.assign({ q:'', upcoming:true, played:true, view:'table' }, loadState());
+    const save = ()=>{ saveState(state); list(); };
+    document.getElementById('q').addEventListener('input', (e)=>{ state.q = e.target.value; save(); });
+    document.getElementById('flt_upcoming_radio').addEventListener('change', (e)=>{ if (e.target.checked) { state.which = 'upcoming'; e.target.closest('label').classList.add('active'); document.getElementById('flt_played_radio').closest('label').classList.remove('active'); save(); } });
+    document.getElementById('flt_played_radio').addEventListener('change', (e)=>{ if (e.target.checked) { state.which = 'played'; e.target.closest('label').classList.add('active'); document.getElementById('flt_upcoming_radio').closest('label').classList.remove('active'); save(); } });
+    document.getElementById('view_table').addEventListener('click', ()=>{ state.view='table'; save(); toggleView(); });
+    document.getElementById('view_cards').addEventListener('click', ()=>{ state.view='cards'; save(); toggleView(); });
+    document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const fd = new FormData(); fd.append('file', f);
+      const res = await fetch('/api/matches/import', { method:'POST', body: fd });
+      if (!res.ok){ toast('Import misslyckades'); return; }
+      const j = await res.json();
+      toast(`Importerade ${j.imported}, misslyckades ${j.failed}`);
+      list();
+      e.target.value = '';
+    });
+    document.getElementById('deleteAllBtn').addEventListener('click', async ()=>{
+      if (!confirm('Radera ALLA matcher?')) return;
+      if (!confirm('Är du säker? Detta går inte att ångra.')) return;
+      const res = await fetch('/api/matches', { method:'DELETE' });
+      if (!res.ok){ toast('Radering misslyckades'); return; }
+      const j = await res.json().catch(()=>({deleted:0}));
+      toast(`Raderade ${j.deleted||0} matcher`);
+      list();
+    });
+    toggleView();
+  }
+  function toggleView(){
+    const state = Object.assign({ view:'table' }, loadState());
+    document.getElementById('view_table').classList.toggle('active', state.view==='table');
+    document.getElementById('view_cards').classList.toggle('active', state.view==='cards');
+    document.getElementById('tableWrap').style.display = state.view==='table' ? '' : 'none';
+    document.getElementById('cardsWrap').style.display = state.view==='cards' ? '' : 'none';
+  }
+
+  bindUI();
   list();
+
+  function toast(msg){
+    const host = document.getElementById('toast');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    host.appendChild(el);
+    requestAnimationFrame(()=> el.classList.add('show'));
+    setTimeout(()=>{
+      el.classList.remove('show');
+      setTimeout(()=> host.removeChild(el), 200);
+    }, 2200);
+  }
 </script>
 </html>
