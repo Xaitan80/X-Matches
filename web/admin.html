@@ -20,6 +20,15 @@
   .row{ display:flex; gap:.5rem; align-items:center }
   .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:.8rem }
   a{ color:#1e66ff; text-decoration:none }
+  /* Modal for masked password input */
+  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:10000 }
+  .modal{ background:#fff; border-radius:14px; padding:1rem; box-shadow:0 10px 28px rgba(0,0,0,.25); width:min(92vw, 380px) }
+  .modal h2{ margin:.25rem 0 .6rem; font-size:1.1rem }
+  .modal label{ display:block; margin:.35rem 0 .2rem; color:#4c5d73; font-size:.92rem }
+  .modal input{ width:100%; padding:.55rem .7rem; border:2px solid #b3d4ff; border-radius:10px; box-sizing:border-box }
+  .modal .actions{ display:flex; gap:.5rem; justify-content:flex-end; margin-top:.8rem }
+  .modal .btn{ background:#1e66ff; color:#fff; border:0; padding:.45rem .8rem; border-radius:10px; cursor:pointer }
+  .modal .btn-outline{ background:transparent; color:#1e66ff; border:2px solid #1e66ff }
 </style>
 
 <div class="wrap">
@@ -31,6 +40,21 @@
       <tbody></tbody>
     </table>
   </div>
+</div>
+
+<!-- Password modal -->
+<div id="pwBackdrop" class="backdrop" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+  <div class="modal">
+    <h2 id="pwTitle">Återställ lösenord</h2>
+    <div id="pwUser" style="color:#4c5d73; font-size:.92rem; margin-bottom:.2rem"></div>
+    <label for="pwInput">Nytt lösenord (minst 12 tecken)</label>
+    <input id="pwInput" type="password" autocomplete="new-password" minlength="12" />
+    <div class="actions">
+      <button id="pwCancel" class="btn btn-outline" type="button">Avbryt</button>
+      <button id="pwSave" class="btn" type="button">Spara</button>
+    </div>
+  </div>
+  
 </div>
 
 <script>
@@ -49,11 +73,28 @@ async function loadUsers(){
     const td = document.createElement('td');
     const btn = document.createElement('button'); btn.textContent='Återställ lösenord';
     btn.addEventListener('click', async ()=>{
-      const pw = prompt('Nytt lösenord (minst 12 tecken):');
-      if (pw===null) return; if (pw.length<12){ alert('För kort.'); return; }
-      const r = await fetch(`/api/admin/users/${u.id}/reset_password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
-      if (!r.ok){ alert('Misslyckades.'); return; }
-      alert('Lösenord uppdaterat.');
+      // Open masked modal
+      const bd = document.getElementById('pwBackdrop');
+      const inp = document.getElementById('pwInput');
+      const labelU = document.getElementById('pwUser');
+      bd.style.display='flex';
+      labelU.textContent = `Användare: ${u.email}`;
+      inp.value=''; inp.focus();
+      const save = async ()=>{
+        const pw = inp.value||'';
+        if (pw.length<12){ alert('Lösenordet måste vara minst 12 tecken.'); return; }
+        const r = await fetch(`/api/admin/users/${u.id}/reset_password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
+        if (!r.ok){ alert('Misslyckades.'); return; }
+        alert('Lösenord uppdaterat.');
+        bd.style.display='none';
+      };
+      const pwSaveBtn = document.getElementById('pwSave');
+      const pwCancelBtn = document.getElementById('pwCancel');
+      const onKey = (e)=>{ if (e.key==='Enter') save(); if (e.key==='Escape') { bd.style.display='none'; } };
+      inp.onkeydown = onKey;
+      pwSaveBtn.onclick = save;
+      pwCancelBtn.onclick = ()=>{ bd.style.display='none'; };
+      bd.onclick = (e)=>{ if (e.target===bd) { bd.style.display='none'; } };
     });
     const adm = document.createElement('button'); adm.style.marginLeft='.4rem'; adm.textContent = u.is_admin?'Ta bort admin':'Gör admin';
     adm.addEventListener('click', async ()=>{
