@@ -20,7 +20,7 @@ import (
 	"github.com/xaitan80/X-Matches/internal/matches"
 )
 
-//go:embed web/* internal/media/*
+//go:embed web/* internal/media/* internal/media2/*
 var webFS embed.FS
 
 func main() {
@@ -136,6 +136,33 @@ func main() {
 			return
 		}
 		// basic content-type by extension
+		ct := "application/octet-stream"
+		switch strings.ToLower(filepath.Ext(full)) {
+		case ".jpg", ".jpeg":
+			ct = "image/jpeg"
+		case ".png":
+			ct = "image/png"
+		case ".gif":
+			ct = "image/gif"
+		case ".webp":
+			ct = "image/webp"
+		}
+		c.Data(http.StatusOK, ct, b)
+	})
+
+	// Serve embedded media2 (e.g., admin backgrounds)
+	r.GET("/media2/*file", func(c *gin.Context) {
+		p := path.Clean(strings.TrimPrefix(c.Param("file"), "/"))
+		if p == "." || strings.Contains(p, "..") || p == "" {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		full := filepath.ToSlash(path.Join("internal/media2", p))
+		b, err := webFS.ReadFile(full)
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
 		ct := "application/octet-stream"
 		switch strings.ToLower(filepath.Ext(full)) {
 		case ".jpg", ".jpeg":

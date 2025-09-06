@@ -137,6 +137,45 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
 		}
 		c.JSON(http.StatusOK, gin.H{"id": u.ID, "email": u.Email, "is_admin": (u.IsAdmin || isAdminEmail(u.Email))})
 	})
+
+	// Change own password
+	api.POST("/me/password", func(c *gin.Context) {
+		u, ok := CurrentUser(c, repo)
+		if !ok { c.JSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
+		var req struct{
+			CurrentPassword string `json:"current_password"`
+			NewPassword string `json:"new_password"`
+			NewPasswordConfirm string `json:"new_password_confirm"`
+		}
+		if err := c.BindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid json"}); return }
+		if len(req.NewPassword) < 12 { c.JSON(http.StatusBadRequest, gin.H{"error":"password too short (min 12)"}); return }
+		if req.NewPassword != req.NewPasswordConfirm { c.JSON(http.StatusBadRequest, gin.H{"error":"passwords do not match"}); return }
+		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error":"invalid current password"}); return }
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error":"hash failed"}); return }
+		if err := repo.SetPasswordHash(c.Request.Context(), u.ID, string(hash)); err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	// Change own email (requires password)
+	api.POST("/me/email", func(c *gin.Context) {
+		u, ok := CurrentUser(c, repo)
+		if !ok { c.JSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
+		var req struct{
+			NewEmail string `json:"new_email"`
+			Password string `json:"password"`
+		}
+		if err := c.BindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid json"}); return }
+		email := strings.TrimSpace(strings.ToLower(req.NewEmail))
+		if email == "" || !strings.Contains(email, "@") { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid email"}); return }
+		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error":"invalid password"}); return }
+		if err := repo.UpdateEmail(c.Request.Context(), u.ID, email); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "unique") { c.JSON(http.StatusConflict, gin.H{"error":"email already in use"}); return }
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+		c.JSON(http.StatusOK, gin.H{"ok": true, "email": email})
+	})
 }
 
 // CurrentUser resolves user from the session cookie for convenience.

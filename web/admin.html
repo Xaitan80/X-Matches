@@ -4,7 +4,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Admin – X‑Matches</title>
 <style>
-  body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0a2540; background:linear-gradient(180deg,#b0ddff 0%,#e6f3ff 60%);} 
+  body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0a2540;
+    /* Fallback color */
+    background-color:#f2f4f7;
+    /* Use embedded admin background if present */
+    background-image:url('/media2/admin.bg.jpeg');
+    background-repeat:no-repeat; background-position:center; background-size:cover; background-attachment:fixed;}
   .wrap{ max-width:900px; margin:6vh auto; padding: 0 1rem; }
   .card{ background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(2,12,27,.08); padding:1.25rem; }
   h1{ margin:.2rem 0 .8rem; font-size:1.35rem }
