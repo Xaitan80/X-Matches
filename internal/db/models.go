@@ -5,30 +5,30 @@
 package db
 
 type Match struct {
-    ID           int64
-    StartIso     *string
-    EndIso       *string
-    DateRaw      *string
-    TimeRaw      *string
-    EndTimeRaw   *string
-    Weekday      *string
-    League       *string
-    Team         *string
-    Opponent     *string
-    HomeTeam     *string
-    AwayTeam     *string
-    Venue        *string
-    Court        *string
-    City         *string
-    GatherTime   *string
-    GatherPlace  *string
-    MatchNumber  *string
-    Referees     *string
-    Notes        *string
-    Played       *int64
-    GoalsFor     *int64
-    GoalsAgainst *int64
-    PlayerNotes  *string
-    TopScorerTeam *string
-    TopScorerOpponent *string
+	ID                int64
+	StartIso          *string
+	EndIso            *string
+	DateRaw           *string
+	TimeRaw           *string
+	EndTimeRaw        *string
+	Weekday           *string
+	League            *string
+	Team              *string
+	Opponent          *string
+	HomeTeam          *string
+	AwayTeam          *string
+	Venue             *string
+	Court             *string
+	City              *string
+	GatherTime        *string
+	GatherPlace       *string
+	MatchNumber       *string
+	Referees          *string
+	Notes             *string
+	Played            *int64
+	GoalsFor          *int64
+	GoalsAgainst      *int64
+	PlayerNotes       *string
+	TopScorerTeam     *string
+	TopScorerOpponent *string
 }
