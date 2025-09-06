@@ -188,6 +188,32 @@ func RegisterAdminRoutes(r *gin.Engine, repo *Repository) {
         var id int64
         _, _ = fmt.Sscan(idStr, &id)
         if id <= 0 { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid id"}); return }
+        // If user is demoting themselves, ensure at least one other admin remains
+        if !req.IsAdmin {
+            if me, ok := CurrentUser(c, repo); ok && me.ID == id {
+                // Count DB admins excluding this user
+                n, err := repo.CountOtherAdmins(c.Request.Context(), id)
+                if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+                // Also consider admins granted via ADMIN_EMAILS (other than self)
+                hasOtherEnv := false
+                if isAdminEmail(me.Email) {
+                    // self has env admin; check if there are other env admins
+                    list := strings.Split(os.Getenv("ADMIN_EMAILS"), ",")
+                    e := strings.ToLower(strings.TrimSpace(me.Email))
+                    for _, item := range list {
+                        s := strings.ToLower(strings.TrimSpace(item))
+                        if s != "" && s != e { hasOtherEnv = true; break }
+                    }
+                } else {
+                    // self not env admin; check if there exists any env admin at all
+                    list := strings.Split(os.Getenv("ADMIN_EMAILS"), ",")
+                    for _, item := range list { if strings.TrimSpace(item) != "" { hasOtherEnv = true; break } }
+                }
+                if n == 0 && !hasOtherEnv {
+                    c.JSON(http.StatusBadRequest, gin.H{"error":"cannot remove last admin"}); return
+                }
+            }
+        }
         if err := repo.SetAdmin(c.Request.Context(), id, req.IsAdmin); err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
         c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -198,6 +224,10 @@ func RegisterAdminRoutes(r *gin.Engine, repo *Repository) {
         var id int64
         _, _ = fmt.Sscan(idStr, &id)
         if id <= 0 { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid id"}); return }
+        // Prevent an admin from deleting their own account
+        if me, ok := CurrentUser(c, repo); ok && me.ID == id {
+            c.JSON(http.StatusBadRequest, gin.H{"error":"cannot delete your own account"}); return
+        }
         if err := repo.DeleteUser(c.Request.Context(), id); err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
         c.Status(http.StatusNoContent)

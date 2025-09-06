@@ -60,6 +60,17 @@ func (r *Repository) GetUserByEmail(ctx context.Context, email string) (User, er
     return u, nil
 }
 
+func (r *Repository) GetUserByID(ctx context.Context, id int64) (User, error) {
+    var u User
+    err := r.db.QueryRowContext(ctx,
+        `SELECT id, email, password_hash, created_at, COALESCE(is_admin,0) FROM users WHERE id = ?`, id,
+    ).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.IsAdmin)
+    if err != nil {
+        return User{}, err
+    }
+    return u, nil
+}
+
 type Session struct {
     Token     string
     UserID    int64
@@ -155,4 +166,10 @@ func (r *Repository) DeleteUser(ctx context.Context, userID int64) error {
         return err
     }
     return tx.Commit()
+}
+
+func (r *Repository) CountOtherAdmins(ctx context.Context, excludeID int64) (int64, error) {
+    var n int64
+    err := r.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM users WHERE is_admin = 1 AND id != ?`, excludeID).Scan(&n)
+    return n, err
 }

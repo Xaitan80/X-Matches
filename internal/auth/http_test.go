@@ -357,3 +357,71 @@ func TestAdmin_DeleteUser_Flow(t *testing.T) {
     w = doJSON(r, http.MethodPost, "/api/auth/login", map[string]any{"email":"bye@example.com", "password":"strongpass123"})
     if w.Code != http.StatusUnauthorized { t.Fatalf("deleted user should not login, got %d", w.Code) }
 }
+
+func TestAdmin_CannotDemoteSelfIfLastAdmin(t *testing.T) {
+    t.Setenv("COOKIE_SECURE", "false")
+    // No ADMIN_EMAILS to ensure only DB admins count
+    db := newTestDB(t)
+    r := newRouterWithAuth(t, db)
+    // create sole admin (first user)
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"only@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
+    ck := loginAndGetCookie(t, r, "only@example.com", "supersecurepass")
+    // find id
+    w := doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ck)
+    var users []map[string]any
+    _ = json.Unmarshal(w.Body.Bytes(), &users)
+    var id int64
+    for _, u := range users { if u["email"].(string) == "only@example.com" { id = int64(u["id"].(float64)) } }
+    if id == 0 { t.Fatalf("id not found") }
+    // attempt to demote self
+    w = doJSONWithCookie(r, http.MethodPatch, "/api/admin/users/"+strconv.FormatInt(id,10)+"/admin", map[string]any{"is_admin": false}, ck)
+    if w.Code != http.StatusBadRequest { t.Fatalf("expected 400 demoting last admin, got %d", w.Code) }
+}
+
+func TestAdmin_CanDemoteSelfIfAnotherAdminExists(t *testing.T) {
+    t.Setenv("COOKIE_SECURE", "false")
+    db := newTestDB(t)
+    r := newRouterWithAuth(t, db)
+    // first user becomes admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"admin1@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
+    // create second admin via flag
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"user2@example.com", "password":"strongpass123", "password_confirm":"strongpass123"})
+    // promote user2 to admin using admin1
+    ckAdmin1 := loginAndGetCookie(t, r, "admin1@example.com", "supersecurepass")
+    // find user2 id
+    w := doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckAdmin1)
+    var users []map[string]any
+    _ = json.Unmarshal(w.Body.Bytes(), &users)
+    var id2 int64
+    for _, u := range users { if u["email"].(string) == "user2@example.com" { id2 = int64(u["id"].(float64)) } }
+    if id2 == 0 { t.Fatalf("user2 id not found") }
+    w = doJSONWithCookie(r, http.MethodPatch, "/api/admin/users/"+strconv.FormatInt(id2,10)+"/admin", map[string]any{"is_admin": true}, ckAdmin1)
+    if w.Code != http.StatusOK { t.Fatalf("promote user2 failed: %d", w.Code) }
+    // now admin1 demotes themselves
+    // find admin1 id
+    var id1 int64
+    for _, u := range users { if u["email"].(string) == "admin1@example.com" { id1 = int64(u["id"].(float64)) } }
+    if id1 == 0 { t.Fatalf("admin1 id not found") }
+    w = doJSONWithCookie(r, http.MethodPatch, "/api/admin/users/"+strconv.FormatInt(id1,10)+"/admin", map[string]any{"is_admin": false}, ckAdmin1)
+    if w.Code != http.StatusOK { t.Fatalf("self demote with other admin should succeed, got %d", w.Code) }
+}
+
+func TestAdmin_CannotDeleteSelf(t *testing.T) {
+    t.Setenv("COOKIE_SECURE", "false")
+    t.Setenv("ADMIN_EMAILS", "root@example.com")
+    db := newTestDB(t)
+    r := newRouterWithAuth(t, db)
+    // create admin
+    _ = doJSON(r, http.MethodPost, "/api/auth/register", map[string]any{"email":"root@example.com", "password":"supersecurepass", "password_confirm":"supersecurepass"})
+    ckAdmin := loginAndGetCookie(t, r, "root@example.com", "supersecurepass")
+    // find self id
+    w := doJSONWithCookie(r, http.MethodGet, "/api/admin/users", nil, ckAdmin)
+    var users []map[string]any
+    _ = json.Unmarshal(w.Body.Bytes(), &users)
+    var selfID int64
+    for _, u := range users { if u["email"].(string) == "root@example.com" { selfID = int64(u["id"].(float64)) } }
+    if selfID == 0 { t.Fatalf("admin id not found") }
+    // attempt to delete self
+    w = doJSONWithCookie(r, http.MethodDelete, "/api/admin/users/"+strconv.FormatInt(selfID,10), nil, ckAdmin)
+    if w.Code != http.StatusBadRequest { t.Fatalf("expected 400 when deleting self, got %d", w.Code) }
+}

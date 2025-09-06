@@ -29,7 +29,11 @@
 </div>
 
 <script>
+let ME_EMAIL = '';
+
 async function loadUsers(){
+  // fetch current user to hide self-destruct actions
+  try { const meRes = await fetch('/api/auth/me'); if (meRes.ok) { const me = await meRes.json(); ME_EMAIL = me.email || ''; } } catch {}
   const res = await fetch('/api/admin/users');
   if (!res.ok){ document.getElementById('err').textContent='Kunde inte hämta användare'; document.getElementById('err').style.display='block'; return; }
   const data = await res.json();
@@ -62,7 +66,9 @@ async function loadUsers(){
       if (!r.ok){ alert('Misslyckades.'); return; }
       tr.remove();
     });
-    td.appendChild(btn); td.appendChild(adm); td.appendChild(del); tr.appendChild(td); tb.appendChild(tr);
+    td.appendChild(btn); td.appendChild(adm);
+    if (String(u.email) !== String(ME_EMAIL)) { td.appendChild(del); }
+    tr.appendChild(td); tb.appendChild(tr);
   });
 }
 loadUsers();
