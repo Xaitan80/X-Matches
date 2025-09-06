@@ -30,8 +30,9 @@
       <input id="pw" type="password" autocomplete="current-password" minlength="12" required />
       <button type="submit">Logga in</button>
     </form>
-    <div class="muted">Har du inget konto? <a id="registerLink" href="#">Registrera</a></div>
+    <div class="muted">Har du inget konto? <a id="registerLink" href="/register">Registrera</a></div>
   </div>
+
 </div>
 
 <script>
@@ -47,17 +48,7 @@
     window.location = '/app';
   });
 
-  document.getElementById('registerLink').addEventListener('click', async (e)=>{
-    e.preventDefault(); err.style.display='none';
-    const email = prompt('E‑post:'); if (!email) return;
-    const pw = prompt('Lösenord (minst 12 tecken):'); if (!pw) return;
-    if (pw.length < 12){ showErr('Lösenordet måste vara minst 12 tecken.'); return; }
-    const pw2 = prompt('Upprepa lösenord:'); if (!pw2) return;
-    if (pw !== pw2){ showErr('Lösenorden matchar inte.'); return; }
-    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pw, password_confirm: pw2 }) });
-    if (!res.ok){ const t = await res.json().catch(()=>({error:'Registrering misslyckades'})); showErr(t.error||'Registrering misslyckades'); return; }
-    alert('Konto skapat! Logga nu in.');
-  });
+  // Registration is now a dedicated page at /register
 
   // If already logged in, bounce to /app
   (async ()=>{
