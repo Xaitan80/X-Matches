@@ -1,4 +1,5 @@
 ![Build & Publish Docker](https://github.com/xaitan80/X-Matches/actions/workflows/docker-publish.yml/badge.svg)
+[![Go Tests](https://github.com/xaitan80/X-Matches/actions/workflows/go-test.yml/badge.svg)](https://github.com/xaitan80/X-Matches/actions/workflows/go-test.yml)
 
 # X‑Matches
 
