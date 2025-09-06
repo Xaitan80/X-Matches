@@ -30,6 +30,13 @@ go.work.sum
 .csv
 .xlsx
 
+# Local SQLite databases
+xmatches.db
+*.db
+*.sqlite
+*.sqlite3
+
+
 # Editor/IDE
 # .idea/
 # .vscode/
