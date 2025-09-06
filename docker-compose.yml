@@ -18,6 +18,9 @@ services:
     environment:
       - ADDR=:8080
       - DB_PATH=/data/xmatches.db
+      # Use non-Secure cookies when serving over plain HTTP locally
+      # In production behind HTTPS, remove this line to keep Secure cookies
+      - COOKIE_SECURE=false
     volumes:
       - xmatches-data:/data
 
