@@ -36,6 +36,10 @@ xmatches.db
 *.sqlite
 *.sqlite3
 
+# Media assets (kept out of VCS) but keep placeholder for builds
+internal/media/*
+!internal/media/.keep
+
 
 # Editor/IDE
 # .idea/
