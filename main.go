@@ -15,6 +15,7 @@ import (
 
 	dbpkg "github.com/xaitan80/X-Matches/internal/db"
 	"github.com/xaitan80/X-Matches/internal/matches"
+    "github.com/xaitan80/X-Matches/internal/auth"
 )
 
 //go:embed web/*
@@ -53,6 +54,7 @@ func main() {
 
     // API
     matches.RegisterRoutes(r, repo)
+    auth.RegisterRoutes(r, sqlDB)
 
     // Enkel frontend
 	r.GET("/", func(c *gin.Context) {

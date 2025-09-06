@@ -6,6 +6,29 @@
 
 En liten app för att lägga in matcher, se dem i en enkel vy och uppdatera resultat. Backend är Go + SQLite, migrationer körs automatiskt vid start.
 
+## Inloggning & Användare
+
+Grundläggande, säker autentisering finns nu:
+
+- Endpoints:
+  - `POST /api/auth/register` — body `{ "email": "user@example.com", "password": "minst 12 tecken" }`
+  - `POST /api/auth/login` — samma body, sätter en HTTP‑only session‑cookie vid lyckad inloggning
+  - `POST /api/auth/logout` — loggar ut och rensar cookie
+  - `GET /api/auth/me` — returnerar `{ id, email }` för inloggad användare
+
+- Säkerhet:
+  - Lösenord hashas med `bcrypt` (x/crypto).
+  - Sessioner lagras i SQLite med kryptografiskt slumpmässiga tokens (`crypto/rand`).
+  - Cookies har `HttpOnly` och `SameSite=Lax`. `Secure` är på som standard.
+
+- Miljövariabler:
+  - `SESSION_TTL` — sessionens livslängd (Go‑duration, default `720h` = 30 dagar)
+  - `COOKIE_SECURE` — sätt `false` för osäker cookie i lokal utveckling över HTTP (default `true`)
+
+Observera: i lokal utveckling utan HTTPS kan du behöva `COOKIE_SECURE=false` för att kunna läsa/kicka cookien.
+
+Migrationer uppdateras automatiskt vid start (nya tabeller: `users`, `sessions`).
+
 ## Köra lokalt
 
 - Krav: Go 1.23+ (CGO påslaget), SQLite C‑toolchain (macOS: Xcode CLT; Linux: build‑essential)
