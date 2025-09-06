@@ -50,3 +50,6 @@ RETURNING *;
 
 -- name: DeleteMatch :exec
 DELETE FROM matches WHERE id = ?;
+
+-- name: DeleteAllMatches :exec
+DELETE FROM matches;
