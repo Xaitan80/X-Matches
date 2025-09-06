@@ -24,10 +24,20 @@ Grundläggande, säker autentisering finns nu:
 - Miljövariabler:
   - `SESSION_TTL` — sessionens livslängd (Go‑duration, default `720h` = 30 dagar)
   - `COOKIE_SECURE` — sätt `false` för osäker cookie i lokal utveckling över HTTP (default `true`)
+  - `ADMIN_EMAILS` — kommaseparerad lista med e‑postadresser som ska räknas som admin (superuser). Dessa har access till `/admin` och admin‑API:t
 
 Observera: i lokal utveckling utan HTTPS kan du behöva `COOKIE_SECURE=false` för att kunna läsa/kicka cookien.
 
 Migrationer uppdateras automatiskt vid start (nya tabeller: `users`, `sessions`).
+
+## Admin
+
+- Sida: `GET /admin` (kräver admin)
+- API:
+  - `GET /api/admin/users` — lista användare (id, email, is_admin, created_at)
+  - `POST /api/admin/users/:id/reset_password` — body `{ "password": "minst 12 tecken" }`
+
+Admin kontrolleras via kolumnen `is_admin` i tabellen `users`. För enkel bootstrap i små installationer kan du sätta `ADMIN_EMAILS` med en eller flera e‑postadresser; dessa behandlas som admin även om `is_admin`=0.
 
 ## Köra lokalt
 

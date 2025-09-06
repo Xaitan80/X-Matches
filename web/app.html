@@ -281,7 +281,10 @@
   <div id="toast"></div>
   <div class="card" style="display:flex; gap:.5rem; align-items:center; justify-content:space-between">
     <div id="me"></div>
-    <button id="logoutBtn" class="btn btn-outline">Logga ut</button>
+    <div>
+      <a id="adminBtn" href="/admin" class="btn btn-outline" style="display:none; margin-right:.4rem">Admin</a>
+      <button id="logoutBtn" class="btn btn-outline">Logga ut</button>
+    </div>
   </div>
 </div>
 
@@ -559,6 +562,7 @@
       if (res.ok) {
         const me = await res.json();
         document.getElementById('me').textContent = `Inloggad som ${me.email}`;
+        if (me.is_admin) { document.getElementById('adminBtn').style.display = 'inline-flex'; }
       }
     } catch {}
   })();
@@ -582,4 +586,3 @@
   }
 </script>
 </html>
-

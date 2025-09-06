@@ -20,16 +20,17 @@ type User struct {
     Email        string
     PasswordHash string
     CreatedAt    time.Time
+    IsAdmin      bool
 }
 
 // CreateUser inserts a new user. Returns conflict error if email exists.
 func (r *Repository) CreateUser(ctx context.Context, email, passwordHash string) (User, error) {
     res := User{}
     row := r.db.QueryRowContext(ctx,
-        `INSERT INTO users (email, password_hash) VALUES (?, ?) RETURNING id, email, password_hash, created_at`,
+        `INSERT INTO users (email, password_hash) VALUES (?, ?) RETURNING id, email, password_hash, created_at, COALESCE(is_admin,0)` ,
         email, passwordHash,
     )
-    if err := row.Scan(&res.ID, &res.Email, &res.PasswordHash, &res.CreatedAt); err != nil {
+    if err := row.Scan(&res.ID, &res.Email, &res.PasswordHash, &res.CreatedAt, &res.IsAdmin); err != nil {
         return User{}, err
     }
     return res, nil
@@ -38,8 +39,8 @@ func (r *Repository) CreateUser(ctx context.Context, email, passwordHash string)
 func (r *Repository) GetUserByEmail(ctx context.Context, email string) (User, error) {
     var u User
     err := r.db.QueryRowContext(ctx,
-        `SELECT id, email, password_hash, created_at FROM users WHERE email = ?`, email,
-    ).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt)
+        `SELECT id, email, password_hash, created_at, COALESCE(is_admin,0) FROM users WHERE email = ?`, email,
+    ).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.IsAdmin)
     if err != nil {
         return User{}, err
     }
@@ -90,11 +91,11 @@ func (r *Repository) GetUserBySession(ctx context.Context, token string) (User, 
         _ = err
     }
     err := r.db.QueryRowContext(ctx, `
-        SELECT u.id, u.email, u.password_hash, u.created_at
+        SELECT u.id, u.email, u.password_hash, u.created_at, COALESCE(u.is_admin,0)
         FROM sessions s
         JOIN users u ON u.id = s.user_id
         WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP
-    `, token).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt)
+    `, token).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.IsAdmin)
     if err != nil {
         return User{}, err
     }
@@ -103,3 +104,29 @@ func (r *Repository) GetUserBySession(ctx context.Context, token string) (User, 
 
 var ErrNotFound = errors.New("not found")
 
+// Admin utilities
+func (r *Repository) ListUsers(ctx context.Context) ([]User, error) {
+    rows, err := r.db.QueryContext(ctx, `SELECT id, email, password_hash, created_at, COALESCE(is_admin,0) FROM users ORDER BY id`)
+    if err != nil { return nil, err }
+    defer rows.Close()
+    var out []User
+    for rows.Next() {
+        var u User
+        if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.IsAdmin); err != nil { return nil, err }
+        // don't expose password hash to callers casually; callers should omit it
+        out = append(out, u)
+    }
+    return out, rows.Err()
+}
+
+func (r *Repository) SetPasswordHash(ctx context.Context, userID int64, newHash string) error {
+    _, err := r.db.ExecContext(ctx, `UPDATE users SET password_hash = ? WHERE id = ?`, newHash, userID)
+    return err
+}
+
+func (r *Repository) SetAdmin(ctx context.Context, userID int64, isAdmin bool) error {
+    val := 0
+    if isAdmin { val = 1 }
+    _, err := r.db.ExecContext(ctx, `UPDATE users SET is_admin = ? WHERE id = ?`, val, userID)
+    return err
+}
