@@ -3,6 +3,7 @@ package auth
 import (
     "database/sql"
     "errors"
+    "fmt"
     "net/http"
     "os"
     "strings"
@@ -97,7 +98,7 @@ func RegisterRoutes(r *gin.Engine, db *sql.DB) {
     api.GET("/me", func(c *gin.Context) {
         u, ok := CurrentUser(c, repo)
         if !ok { c.JSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
-        c.JSON(http.StatusOK, gin.H{"id": u.ID, "email": u.Email})
+        c.JSON(http.StatusOK, gin.H{"id": u.ID, "email": u.Email, "is_admin": (u.IsAdmin || isAdminEmail(u.Email))})
     })
 }
 
@@ -123,3 +124,70 @@ func AuthRequired(repo *Repository) gin.HandlerFunc {
     }
 }
 
+// AdminRequired ensures the requester is authenticated and admin.
+func AdminRequired(repo *Repository) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        tok, err := c.Cookie(CookieName)
+        if err != nil || tok == "" { c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
+        u, err := repo.GetUserBySession(c.Request.Context(), tok)
+        if err != nil { c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
+        // Allow admin via DB flag or ADMIN_EMAILS env list
+        if u.IsAdmin || isAdminEmail(u.Email) {
+            c.Next(); return
+        }
+        c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error":"forbidden"})
+    }
+}
+
+func isAdminEmail(email string) bool {
+    list := strings.Split(os.Getenv("ADMIN_EMAILS"), ",")
+    e := strings.ToLower(strings.TrimSpace(email))
+    for _, item := range list {
+        if strings.ToLower(strings.TrimSpace(item)) == e && e != "" { return true }
+    }
+    return false
+}
+
+// Admin API routes
+func RegisterAdminRoutes(r *gin.Engine, repo *Repository) {
+    admin := r.Group("/api/admin")
+    admin.Use(AdminRequired(repo))
+
+    admin.GET("/users", func(c *gin.Context) {
+        list, err := repo.ListUsers(c.Request.Context())
+        if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+        // scrub password hashes
+        out := make([]gin.H, 0, len(list))
+        for _, u := range list {
+            out = append(out, gin.H{"id": u.ID, "email": u.Email, "is_admin": u.IsAdmin, "created_at": u.CreatedAt})
+        }
+        c.JSON(http.StatusOK, out)
+    })
+
+    admin.POST("/users/:id/reset_password", func(c *gin.Context) {
+        var req struct{ Password string `json:"password"` }
+        if err := c.BindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid json"}); return }
+        if len(req.Password) < 12 { c.JSON(http.StatusBadRequest, gin.H{"error":"password too short (min 12)"}); return }
+        idStr := c.Param("id")
+        var id int64
+        _, _ = fmt.Sscan(idStr, &id)
+        if id <= 0 { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid id"}); return }
+        hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+        if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error":"hash failed"}); return }
+        if err := repo.SetPasswordHash(c.Request.Context(), id, string(hash)); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+        c.JSON(http.StatusOK, gin.H{"ok": true})
+    })
+
+    admin.PATCH("/users/:id/admin", func(c *gin.Context) {
+        var req struct{ IsAdmin bool `json:"is_admin"` }
+        if err := c.BindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid json"}); return }
+        idStr := c.Param("id")
+        var id int64
+        _, _ = fmt.Sscan(idStr, &id)
+        if id <= 0 { c.JSON(http.StatusBadRequest, gin.H{"error":"invalid id"}); return }
+        if err := repo.SetAdmin(c.Request.Context(), id, req.IsAdmin); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
+        c.JSON(http.StatusOK, gin.H{"ok": true})
+    })
+}

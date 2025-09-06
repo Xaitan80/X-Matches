@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="sv">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin – X‑Matches</title>
+<style>
+  body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0a2540; background:linear-gradient(180deg,#b0ddff 0%,#e6f3ff 60%);} 
+  .wrap{ max-width:900px; margin:6vh auto; padding: 0 1rem; }
+  .card{ background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(2,12,27,.08); padding:1.25rem; }
+  h1{ margin:.2rem 0 .8rem; font-size:1.35rem }
+  table{ border-collapse:separate; border-spacing:0; width:100%; background:#fff; border-radius:12px; overflow:hidden; }
+  th,td{ padding:.55rem .7rem; border-bottom:1px solid #e7eefc; text-align:left }
+  button{ background:#1e66ff; color:#fff; border:0; padding:.4rem .7rem; border-radius:10px; cursor:pointer }
+  input{ padding:.4rem .5rem; border-radius:8px; border:2px solid #b3d4ff; box-sizing:border-box }
+  .row{ display:flex; gap:.5rem; align-items:center }
+  .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:.8rem }
+  a{ color:#1e66ff; text-decoration:none }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div class="top"><h1>Admin</h1> <div><a href="/app">Till app</a></div></div>
+    <div id="err" style="display:none; background:#fee2e2; color:#991b1b; padding:.5rem .7rem; border-radius:10px; margin:.5rem 0;"></div>
+    <table id="tbl">
+      <thead><tr><th>ID</th><th>E‑post</th><th>Admin</th><th>Skapad</th><th>Åtgärd</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+async function loadUsers(){
+  const res = await fetch('/api/admin/users');
+  if (!res.ok){ document.getElementById('err').textContent='Kunde inte hämta användare'; document.getElementById('err').style.display='block'; return; }
+  const data = await res.json();
+  const tb = document.querySelector('#tbl tbody'); tb.innerHTML='';
+  data.forEach(u=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${u.id}</td><td>${u.email}</td><td id="ad_${u.id}">${u.is_admin?'Ja':'Nej'}</td><td>${new Date(u.created_at).toLocaleString('sv-SE')}</td>`;
+    const td = document.createElement('td');
+    const btn = document.createElement('button'); btn.textContent='Återställ lösenord';
+    btn.addEventListener('click', async ()=>{
+      const pw = prompt('Nytt lösenord (minst 12 tecken):');
+      if (pw===null) return; if (pw.length<12){ alert('För kort.'); return; }
+      const r = await fetch(`/api/admin/users/${u.id}/reset_password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
+      if (!r.ok){ alert('Misslyckades.'); return; }
+      alert('Lösenord uppdaterat.');
+    });
+    const adm = document.createElement('button'); adm.style.marginLeft='.4rem'; adm.textContent = u.is_admin?'Ta bort admin':'Gör admin';
+    adm.addEventListener('click', async ()=>{
+      const want = !u.is_admin;
+      const r = await fetch(`/api/admin/users/${u.id}/admin`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_admin: want }) });
+      if (!r.ok){ alert('Misslyckades.'); return; }
+      u.is_admin = want;
+      document.getElementById('ad_'+u.id).textContent = u.is_admin?'Ja':'Nej';
+      adm.textContent = u.is_admin?'Ta bort admin':'Gör admin';
+    });
+    td.appendChild(btn); td.appendChild(adm); tr.appendChild(td); tb.appendChild(tr);
+  });
+}
+loadUsers();
+</script>
+</html>

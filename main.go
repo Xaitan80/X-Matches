@@ -57,6 +57,8 @@ func main() {
     // Auth-aware frontend routing
     authRepo := auth.NewRepository(sqlDB)
     matches.RegisterRoutes(r, repo, auth.AuthRequired(authRepo))
+    // Admin API
+    auth.RegisterAdminRoutes(r, authRepo)
 
     // Auth-aware frontend routing
 
@@ -80,6 +82,13 @@ func main() {
     r.GET("/app", auth.AuthRequired(authRepo), func(c *gin.Context) {
         f, err := webFS.ReadFile("web/app.html")
         if err != nil { c.String(http.StatusInternalServerError, "missing app"); return }
+        c.Data(http.StatusOK, "text/html; charset=utf-8", f)
+    })
+
+    // Admin page (superuser only)
+    r.GET("/admin", auth.AdminRequired(authRepo), func(c *gin.Context){
+        f, err := webFS.ReadFile("web/admin.html")
+        if err != nil { c.String(http.StatusInternalServerError, "missing admin"); return }
         c.Data(http.StatusOK, "text/html; charset=utf-8", f)
     })
 
