@@ -23,31 +23,31 @@ RETURNING id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, lea
 `
 
 type CreateMatchParams struct {
-    StartIso     *string
-    EndIso       *string
-    DateRaw      *string
-    TimeRaw      *string
-    EndTimeRaw   *string
-    Weekday      *string
-    League       *string
-    Team         *string
-    Opponent     *string
-    HomeTeam     *string
-    AwayTeam     *string
-    Venue        *string
-    Court        *string
-    City         *string
-    GatherTime   *string
-    GatherPlace  *string
-    MatchNumber  *string
-    Referees     *string
-    Notes        *string
-    Played       *int64
-    GoalsFor     *int64
-    GoalsAgainst *int64
-    PlayerNotes  *string
-    TopScorerTeam *string
-    TopScorerOpponent *string
+	StartIso          *string
+	EndIso            *string
+	DateRaw           *string
+	TimeRaw           *string
+	EndTimeRaw        *string
+	Weekday           *string
+	League            *string
+	Team              *string
+	Opponent          *string
+	HomeTeam          *string
+	AwayTeam          *string
+	Venue             *string
+	Court             *string
+	City              *string
+	GatherTime        *string
+	GatherPlace       *string
+	MatchNumber       *string
+	Referees          *string
+	Notes             *string
+	Played            *int64
+	GoalsFor          *int64
+	GoalsAgainst      *int64
+	PlayerNotes       *string
+	TopScorerTeam     *string
+	TopScorerOpponent *string
 }
 
 func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match, error) {
@@ -124,10 +124,12 @@ DELETE FROM matches
 `
 
 func (q *Queries) DeleteAllMatches(ctx context.Context) (int64, error) {
-    res, err := q.db.ExecContext(ctx, deleteAllMatches)
-    if err != nil { return 0, err }
-    n, _ := res.RowsAffected()
-    return n, nil
+	res, err := q.db.ExecContext(ctx, deleteAllMatches)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
 }
 
 const getMatch = `-- name: GetMatch :one
@@ -256,32 +258,32 @@ RETURNING id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, lea
 `
 
 type UpdateMatchParams struct {
-    StartIso     *string
-    EndIso       *string
-    DateRaw      *string
-    TimeRaw      *string
-    EndTimeRaw   *string
-    Weekday      *string
-    League       *string
-    Team         *string
-    Opponent     *string
-    HomeTeam     *string
-    AwayTeam     *string
-    Venue        *string
-    Court        *string
-    City         *string
-    GatherTime   *string
-    GatherPlace  *string
-    MatchNumber  *string
-    Referees     *string
-    Notes        *string
-    Played       *int64
-    GoalsFor     *int64
-    GoalsAgainst *int64
-    PlayerNotes  *string
-    TopScorerTeam *string
-    TopScorerOpponent *string
-    ID           int64
+	StartIso          *string
+	EndIso            *string
+	DateRaw           *string
+	TimeRaw           *string
+	EndTimeRaw        *string
+	Weekday           *string
+	League            *string
+	Team              *string
+	Opponent          *string
+	HomeTeam          *string
+	AwayTeam          *string
+	Venue             *string
+	Court             *string
+	City              *string
+	GatherTime        *string
+	GatherPlace       *string
+	MatchNumber       *string
+	Referees          *string
+	Notes             *string
+	Played            *int64
+	GoalsFor          *int64
+	GoalsAgainst      *int64
+	PlayerNotes       *string
+	TopScorerTeam     *string
+	TopScorerOpponent *string
+	ID                int64
 }
 
 func (q *Queries) UpdateMatch(ctx context.Context, arg UpdateMatchParams) (Match, error) {
