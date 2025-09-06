@@ -85,6 +85,11 @@ docker run --rm \
 
 Öppna: http://localhost:8080
 
+Prenumerera i kalender (iCal):
+
+- Ladda ner: `http://localhost:8080/api/matches.ics`
+- Lägg till i din kalender som fil eller via URL (om exponerad).
+
 Snabb felsökning:
 
 - Testa utan volym (temporär DB):
@@ -105,6 +110,9 @@ docker run --rm --user 0:0 -p 8080:8080 -v xmatches-data:/data -e DB_PATH=/data/
 - UI: `GET /` (enkel webbsida)
 - Lista matcher: `GET /api/matches`
 - Exportera CSV: `GET /api/matches.csv` (laddar ner `matches_YYYY-MM-DD.csv`)
+- Exportera iCal: `GET /api/matches.ics` (prenumerera i kalender)
+- Importera: `POST /api/matches/import` (multipart med `file` – `.csv` eller `.xlsx`)
+  - Valfri query: `our_team=H43%20Lund%20HF` för att sätta vilket lag som ska tolkas som "vårt" vid import (hemma/borta mappas till team/opponent utifrån detta)
 - Hämta match: `GET /api/matches/:id`
 - Skapa match: `POST /api/matches`
 - Uppdatera match: `PATCH /api/matches/:id`
@@ -133,8 +141,55 @@ curl -X PATCH http://localhost:8080/api/matches/1 \
   -d '{"played": true, "goals_for": 3, "goals_against": 1}'
 ```
 
+Hälsa/Status:
+
+```
+curl http://localhost:8080/healthz
+```
+
 ## Utveckling
 
 - Formattering: `make fmt`
 - Rensa databasen: stoppa appen och radera `xmatches.db` (eller byt `DB_PATH`).
 - Ha kul
+Import‑exempel:
+
+CSV:
+
+```
+curl -X POST http://localhost:8080/api/matches/import \
+  -F file=@matches.csv
+```
+
+XLSX:
+
+```
+curl -X POST http://localhost:8080/api/matches/import \
+  -F file=@matches.xlsx
+
+Med valt "vårt lag":
+
+```
+curl -X POST "http://localhost:8080/api/matches/import?our_team=H43%20Lund%20HF" \
+  -F file=@matches_2025-09-05\ 19_50_44.csv
+```
+
+Radera alla matcher:
+
+```
+curl -X DELETE http://localhost:8080/api/matches
+```
+```
+
+Stödda kolumnnamn (skiftlägesokänsliga, mellanslag/underscore ignoreras; svenska alias stöds):
+- date_raw (alias: datum)
+- time_raw (alias: starttid/tid), end_time_raw (alias: sluttid)
+- team, opponent, home_team, away_team
+- venue (alias: hall/plats), city (alias: stad)
+- league (serie), court (plan)
+- match_number, referees, notes (noteringar)
+- played (true/false/1/ja)
+- goals_for, goals_against
+- player_notes
+- top_scorer_team, top_scorer_opponent
+- start_iso, end_iso (ISO8601)

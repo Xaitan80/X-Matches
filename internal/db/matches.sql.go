@@ -119,6 +119,17 @@ func (q *Queries) DeleteMatch(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteAllMatches = `-- name: DeleteAllMatches :exec
+DELETE FROM matches
+`
+
+func (q *Queries) DeleteAllMatches(ctx context.Context) (int64, error) {
+    res, err := q.db.ExecContext(ctx, deleteAllMatches)
+    if err != nil { return 0, err }
+    n, _ := res.RowsAffected()
+    return n, nil
+}
+
 const getMatch = `-- name: GetMatch :one
 SELECT id, start_iso, end_iso, date_raw, time_raw, end_time_raw, weekday, league, team, opponent, home_team, away_team, venue, court, city, gather_time, gather_place, match_number, referees, notes, played, goals_for, goals_against, player_notes, top_scorer_team, top_scorer_opponent FROM matches WHERE id = ?
 `

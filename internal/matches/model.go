@@ -16,8 +16,6 @@ type Match struct {
     Venue        string  `json:"venue"`
     Court        string  `json:"court"`
     City         string  `json:"city"`
-    GatherTime   string  `json:"gather_time"`
-    GatherPlace  string  `json:"gather_place"`
     MatchNumber  string  `json:"match_number"`
     Referees     string  `json:"referees"`
     Notes        string  `json:"notes"`

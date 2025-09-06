@@ -51,10 +51,10 @@ func main() {
         log.Fatalf("trusted proxies: %v", err)
     }
 
-	// API
-	matches.RegisterRoutes(r, repo)
+    // API
+    matches.RegisterRoutes(r, repo)
 
-	// Enkel frontend
+    // Enkel frontend
 	r.GET("/", func(c *gin.Context) {
 		f, err := webFS.ReadFile("web/index.html")
 		if err != nil {
@@ -65,7 +65,16 @@ func main() {
 	})
 
 	addr := env("ADDR", ":8080")
-	log.Printf("Lyssnar på %s", addr)
+    // Liveness/Readiness
+    r.GET("/healthz", func(c *gin.Context) {
+        if err := sqlDB.Ping(); err != nil {
+            c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "error": err.Error()})
+            return
+        }
+        c.JSON(http.StatusOK, gin.H{"ok": true})
+    })
+
+    log.Printf("Lyssnar på %s", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
 	}
