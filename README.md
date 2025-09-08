@@ -6,6 +6,52 @@
 
 En liten app för att lägga in matcher, se dem i en enkel vy och uppdatera resultat. Backend är Go + SQLite, migrationer körs automatiskt vid start.
 
+## GUI (skrivbordsapp)
+
+Det finns nu en fristående skrivbordsapp byggd med Fyne.
+
+Bygg och starta:
+
+```
+go build ./cmd/xmatches-gui
+./xmatches-gui
+```
+
+Miljö:
+- `DB_PATH` — sökväg till SQLite (default `xmatches.db`).
+
+Funktioner:
+- Inloggning/registrering (första användaren blir admin i DB:n).
+- Lista matcher, lägg till ny match.
+- Importera från CSV/XLSX via filval (stöd för `--our-team` motsvarighet i dialogen).
+
+## CLI (fristående program)
+
+Förutom webbgränssnittet finns ett fristående CLI som kör utan webbläsare.
+
+Bygg binären:
+
+```
+go build ./cmd/xmatches
+```
+
+Snabbstart:
+
+```
+./xmatches init
+./xmatches register --email you@example.com --password "minst-12-tecken"
+./xmatches login --email you@example.com --password "minst-12-tecken"
+./xmatches list
+```
+
+Importera från fil:
+
+```
+./xmatches import --file path/to/matches.xlsx --our-team "H43 Lund HF"
+```
+
+Övriga kommandon: `./xmatches help`
+
 ## Inloggning & Användare
 
 Grundläggande, säker autentisering finns nu:

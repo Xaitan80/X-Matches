@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+    "os"
 	"mime/multipart"
 	"path/filepath"
 	"strconv"
@@ -275,4 +276,26 @@ func rowToMatch(h map[int]string, row []string, ourTeam string) Match {
 		m.EndISO = &s
 	}
 	return m
+}
+
+// ParseFile reads matches from a local CSV or XLSX file path.
+// ourTeam is optional and helps infer Team/Opponent when home/away are given.
+func ParseFile(path string, ourTeam string) ([]Match, error) {
+    ext := strings.ToLower(filepath.Ext(path))
+    switch ext {
+    case ".csv":
+        f, err := os.Open(path)
+        if err != nil { return nil, err }
+        defer f.Close()
+        return parseCSV(f, ourTeam)
+    case ".xlsx":
+        f, err := os.Open(path)
+        if err != nil { return nil, err }
+        defer f.Close()
+        b, err := io.ReadAll(io.LimitReader(f, 50<<20)) // cap to ~50MB
+        if err != nil { return nil, err }
+        return parseXLSX(b, ourTeam)
+    default:
+        return nil, fmt.Errorf("unsupported file type: %s", ext)
+    }
 }
